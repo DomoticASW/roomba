@@ -1,3 +1,5 @@
+package domain
+
 object Utils:
   extension (e: Either.type)
     def leftIf[T](cond: => Boolean, left: => T): Either[T, Unit] =

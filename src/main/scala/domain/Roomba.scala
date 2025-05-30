@@ -1,3 +1,5 @@
+package domain
+
 import Utils.*
 
 object Roomba extends RoombaOps:
