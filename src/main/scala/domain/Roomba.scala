@@ -17,6 +17,7 @@ object Roomba extends RoombaOps:
 
   enum State:
     case Cleaning
+    case GoingCharging
     case Charging
 
   enum Mode:
@@ -64,8 +65,21 @@ object Roomba extends RoombaOps:
     def currentRoom: String = r.currentRoom
     def chargingStationRoom: String = r.chargingStationRoom
     def rooms: Set[String] = r.rooms
+    def update(
+        battery: Int,
+        state: State,
+        mode: Mode,
+        currentRoom: String
+    ): Roomba =
+      r.copy(
+        battery = battery,
+        state = state,
+        mode = mode,
+        currentRoom = currentRoom
+      )
 
 trait RoombaOps:
+  import Roomba.*
   extension (r: Roomba.Roomba)
     def name: String
     def battery: Int
@@ -74,3 +88,9 @@ trait RoombaOps:
     def currentRoom: String
     def chargingStationRoom: String
     def rooms: Set[String]
+    def update(
+        battery: Int = r.battery,
+        state: State = r.state,
+        mode: Mode = r.mode,
+        currentRoom: String = r.currentRoom
+    ): Roomba
