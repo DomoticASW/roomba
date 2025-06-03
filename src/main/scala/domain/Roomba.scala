@@ -8,7 +8,6 @@ object Roomba extends RoombaOps:
   private case class RoombaImpl(
       name: String,
       battery: Int,
-      state: State,
       mode: Mode,
       currentRoom: String,
       chargingStationRoom: String,
@@ -28,7 +27,6 @@ object Roomba extends RoombaOps:
   def apply(
       name: String,
       battery: Int,
-      state: State,
       mode: Mode,
       currentRoom: String,
       chargingStationRoom: String,
@@ -48,7 +46,6 @@ object Roomba extends RoombaOps:
     yield (RoombaImpl(
       name,
       battery,
-      state,
       mode,
       currentRoom,
       chargingStationRoom,
@@ -60,20 +57,17 @@ object Roomba extends RoombaOps:
   extension (r: Roomba)
     def name: String = r.name
     def battery: Int = r.battery
-    def state: State = r.state
     def mode: Mode = r.mode
     def currentRoom: String = r.currentRoom
     def chargingStationRoom: String = r.chargingStationRoom
     def rooms: Set[String] = r.rooms
     def update(
         battery: Int,
-        state: State,
         mode: Mode,
         currentRoom: String
     ): Roomba =
       r.copy(
         battery = battery,
-        state = state,
         mode = mode,
         currentRoom = currentRoom
       )
@@ -83,14 +77,12 @@ trait RoombaOps:
   extension (r: Roomba.Roomba)
     def name: String
     def battery: Int
-    def state: Roomba.State
     def mode: Roomba.Mode
     def currentRoom: String
     def chargingStationRoom: String
     def rooms: Set[String]
     def update(
         battery: Int = r.battery,
-        state: State = r.state,
         mode: Mode = r.mode,
         currentRoom: String = r.currentRoom
     ): Roomba
