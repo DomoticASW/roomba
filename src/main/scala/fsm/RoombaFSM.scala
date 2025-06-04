@@ -1,12 +1,11 @@
 package fsm
 
-import State as StateMonad
-import State.State as StateMonad
+import state.State.*
 
 object RoombaFSM:
   import scala.util.Random
   import domain.Roomba
-  import domain.Roomba.*
+  import domain.Roomba.{State as RoombaState, *}
   import domain.Roomba.State.*
 
   case class Model(
@@ -24,70 +23,68 @@ object RoombaFSM:
 
   import FSM.*
 
-  private def handleBatteryCountdown(ms: Long): StateMonad[Model, Boolean] =
+  private def handleBatteryCountdown(ms: Long): State[Model, Boolean] =
     for
-      countDown <- StateMonad.inspect((_: Model).batteryCountdown)
+      countDown <- State.inspect((_: Model).batteryCountdown)
       reached = countDown <= 0
       _ <-
         if reached then
-          StateMonad.modify((m: Model) =>
-            m.copy(batteryCountdown = m.batteryRate)
-          )
+          State.modify((m: Model) => m.copy(batteryCountdown = m.batteryRate))
         else
-          StateMonad.modify((m: Model) =>
+          State.modify((m: Model) =>
             m.copy(batteryCountdown = m.batteryCountdown - ms)
           )
     yield (reached)
-  private def handleChangeRoomCountdown(ms: Long): StateMonad[Model, Boolean] =
+  private def handleChangeRoomCountdown(ms: Long): State[Model, Boolean] =
     for
-      countDown <- StateMonad.inspect((_: Model).changeRoomCountdown)
+      countDown <- State.inspect((_: Model).changeRoomCountdown)
       reached = countDown <= 0
       _ <-
         if reached then
-          StateMonad.modify((m: Model) =>
+          State.modify((m: Model) =>
             m.copy(changeRoomCountdown = m.changeRoomRate)
           )
         else
-          StateMonad.modify((m: Model) =>
+          State.modify((m: Model) =>
             m.copy(changeRoomCountdown = m.changeRoomCountdown - ms)
           )
     yield (reached)
-  private def setMode(mode: Mode): StateMonad[Model, Unit] =
-    StateMonad.modify((m: Model) => m.copy(r = m.r.update(mode = mode)))
-  private def incBattery(): StateMonad[Model, Unit] =
-    StateMonad.modify((m: Model) =>
+  private def setMode(mode: Mode): State[Model, Unit] =
+    State.modify((m: Model) => m.copy(r = m.r.update(mode = mode)))
+  private def incBattery(): State[Model, Unit] =
+    State.modify((m: Model) =>
       m.copy(r = m.r.update(battery = m.r.battery + 1))
     )
-  private def decBattery(): StateMonad[Model, Unit] =
-    StateMonad.modify((m: Model) =>
+  private def decBattery(): State[Model, Unit] =
+    State.modify((m: Model) =>
       m.copy(r = m.r.update(battery = m.r.battery - 1))
     )
-  private def changeRoomRandom(): StateMonad[Model, Unit] =
-    StateMonad.modify((m: Model) =>
+  private def changeRoomRandom(): State[Model, Unit] =
+    State.modify((m: Model) =>
       m.copy(r = m.r.update(currentRoom = Random().shuffle(m.r.rooms).head))
     )
 
-  given States[State, Model, Event] with
-    def onEntry(s: State): StateMonad[Model, Unit] = StateMonad.same
-    def onExit(s: State): StateMonad[Model, Unit] = StateMonad.same
+  given States[RoombaState, Model, Event] with
+    def onEntry(s: RoombaState): State[Model, Unit] = State.same
+    def onExit(s: RoombaState): State[Model, Unit] = State.same
     def onActive(
-        s: State,
+        s: RoombaState,
         e: Option[Event],
         timePassed: Long
-    ): StateMonad.State[Model, State] =
+    ): State[Model, RoombaState] =
       val handleChangeModeEvent =
         for _ <- e match
             case Some(Event.ChangeMode(mode)) => setMode(mode)
-            case _                            => StateMonad.same
+            case _                            => State.same
         yield ()
       val handleActivities = s match
         case Cleaning =>
           for
             updateBattery <- handleBatteryCountdown(timePassed)
             changeRoom <- handleChangeRoomCountdown(timePassed)
-            _ <- if updateBattery then decBattery() else StateMonad.same
-            _ <- if changeRoom then changeRoomRandom() else StateMonad.same
-            battery <- StateMonad.inspect((_: Model).r.battery)
+            _ <- if updateBattery then decBattery() else State.same
+            _ <- if changeRoom then changeRoomRandom() else State.same
+            battery <- State.inspect((_: Model).r.battery)
             nextState =
               if battery <= 10 || e == Some(Event.Stop) then GoingCharging
               else Cleaning
@@ -95,7 +92,7 @@ object RoombaFSM:
         case Charging =>
           for
             updateBattery <- handleBatteryCountdown(timePassed)
-            _ <- if updateBattery then incBattery() else StateMonad.same
+            _ <- if updateBattery then incBattery() else State.same
             nextState =
               if e == Some(Event.Start) then Cleaning
               else Charging
@@ -103,9 +100,9 @@ object RoombaFSM:
         case GoingCharging =>
           for
             changeRoom <- handleChangeRoomCountdown(timePassed)
-            _ <- if changeRoom then changeRoomRandom() else StateMonad.same
-            newRoom <- StateMonad.inspect((_: Model).r.currentRoom)
-            chargingStationRoom <- StateMonad.inspect(
+            _ <- if changeRoom then changeRoomRandom() else State.same
+            newRoom <- State.inspect((_: Model).r.currentRoom)
+            chargingStationRoom <- State.inspect(
               (_: Model).r.chargingStationRoom
             )
             nextState =
