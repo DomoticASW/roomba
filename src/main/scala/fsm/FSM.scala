@@ -7,7 +7,6 @@ object State:
   def apply[S, A](run: S => (S, A)): State[S, A] = StateImpl(run)
 
   def same[S]: State[S, Unit] = State(s => (s, ()))
-  def sameWith[S, A](a: A): State[S, A] = State(s => (s, a))
   def inspect[S, A](f: S => A): State[S, A] = State(s => (s, f(s)))
   def modify[S, A](f: S => S): State[S, Unit] = State(s => (f(s), ()))
 

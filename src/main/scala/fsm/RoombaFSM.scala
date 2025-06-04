@@ -88,18 +88,17 @@ object RoombaFSM:
             _ <- if updateBattery then decBattery() else StateMonad.same
             _ <- if changeRoom then changeRoomRandom() else StateMonad.same
             battery <- StateMonad.inspect((_: Model).r.battery)
-            nextState <-
-              if battery <= 10 || e == Some(Event.Stop) then
-                StateMonad.sameWith(GoingCharging)
-              else StateMonad.sameWith(Cleaning)
+            nextState =
+              if battery <= 10 || e == Some(Event.Stop) then GoingCharging
+              else Cleaning
           yield (nextState)
         case Charging =>
           for
             updateBattery <- handleBatteryCountdown(timePassed)
             _ <- if updateBattery then incBattery() else StateMonad.same
-            nextState <-
-              if e == Some(Event.Start) then StateMonad.sameWith(Cleaning)
-              else StateMonad.sameWith(Charging)
+            nextState =
+              if e == Some(Event.Start) then Cleaning
+              else Charging
           yield (nextState)
         case GoingCharging =>
           for
@@ -109,11 +108,10 @@ object RoombaFSM:
             chargingStationRoom <- StateMonad.inspect(
               (_: Model).r.chargingStationRoom
             )
-            nextState <-
-              if e == Some(Event.Start) then StateMonad.sameWith(Cleaning)
-              else if newRoom == chargingStationRoom then
-                StateMonad.sameWith(Charging)
-              else StateMonad.sameWith(GoingCharging)
+            nextState =
+              if e == Some(Event.Start) then Cleaning
+              else if newRoom == chargingStationRoom then Charging
+              else GoingCharging
           yield (nextState)
 
       for
