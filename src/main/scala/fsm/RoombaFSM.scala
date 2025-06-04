@@ -4,9 +4,8 @@ import state.State.*
 
 object RoombaFSM:
   import scala.util.Random
-  import domain.Roomba
   import domain.Roomba.{State as RoombaState, *}
-  import domain.Roomba.State.*
+  import RoombaState.*
 
   case class Model(
       r: Roomba,

@@ -24,33 +24,34 @@ object Roomba extends RoombaOps:
     case Performance
     case DeepCleaning
 
-  def apply(
-      name: String,
-      battery: Int,
-      mode: Mode,
-      currentRoom: String,
-      chargingStationRoom: String,
-      rooms: Set[String]
-  ): Either[BadConfiguration, Roomba] =
-    for
-      _ <- Either.leftIf(
-        rooms(currentRoom) && rooms(chargingStationRoom),
-        BadConfiguration(
-          "Given current room and charging station room must be included in given rooms set"
+  object Roomba:
+    def apply(
+        name: String,
+        battery: Int,
+        mode: Mode,
+        currentRoom: String,
+        chargingStationRoom: String,
+        rooms: Set[String]
+    ): Either[BadConfiguration, Roomba] =
+      for
+        _ <- Either.leftIf(
+          rooms(currentRoom) && rooms(chargingStationRoom),
+          BadConfiguration(
+            "Given current room and charging station room must be included in given rooms set"
+          )
         )
-      )
-      _ <- Either.leftIf(
-        battery >= 0 && battery <= 100,
-        BadConfiguration("Given battery should be between 0 and 100")
-      )
-    yield (RoombaImpl(
-      name,
-      battery,
-      mode,
-      currentRoom,
-      chargingStationRoom,
-      rooms
-    ))
+        _ <- Either.leftIf(
+          battery >= 0 && battery <= 100,
+          BadConfiguration("Given battery should be between 0 and 100")
+        )
+      yield (RoombaImpl(
+        name,
+        battery,
+        mode,
+        currentRoom,
+        chargingStationRoom,
+        rooms
+      ))
 
   case class BadConfiguration(message: String)
 
@@ -74,10 +75,10 @@ object Roomba extends RoombaOps:
 
 trait RoombaOps:
   import Roomba.*
-  extension (r: Roomba.Roomba)
+  extension (r: Roomba)
     def name: String
     def battery: Int
-    def mode: Roomba.Mode
+    def mode: Mode
     def currentRoom: String
     def chargingStationRoom: String
     def rooms: Set[String]
