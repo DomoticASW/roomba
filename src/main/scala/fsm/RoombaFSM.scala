@@ -3,7 +3,7 @@ import scala.util.Random
 import domain.Roomba.*
 import domain.Roomba.State.*
 
-trait RoombaFSM(val batteryRateMs: Long, val changeRoomRateMs: Long):
+object RoombaFSM:
 
   enum Event:
     case ChangeMode(m: Mode)
@@ -22,12 +22,11 @@ trait RoombaFSM(val batteryRateMs: Long, val changeRoomRateMs: Long):
         _ match
           case Cleaning =>
             for
-              _ <- setCountdown(Countdowns.battery, batteryRateMs)
-              _ <- setCountdown(Countdowns.changeRoom, changeRoomRateMs)
+              _ <- setBatteryCountdown
+              _ <- setChangeRoomCountdown
             yield ()
-          case GoingCharging =>
-            setCountdown(Countdowns.changeRoom, changeRoomRateMs)
-          case Charging => setCountdown(Countdowns.battery, batteryRateMs)
+          case GoingCharging => setChangeRoomCountdown
+          case Charging      => setBatteryCountdown
 
     override def onActive(e: Option[Event], timePassed: Long): FSMState[State] =
       for
@@ -72,6 +71,16 @@ trait RoombaFSM(val batteryRateMs: Long, val changeRoomRateMs: Long):
               yield (nextState)
       yield (nextState)
 
+    private def setBatteryCountdown: FSMState[Unit] =
+      for
+        ms <- inspect(_.batteryRateMs)
+        _ <- setCountdown(Countdowns.battery, ms)
+      yield ()
+    private def setChangeRoomCountdown: FSMState[Unit] =
+      for
+        ms <- inspect(_.changeRoomRateMs)
+        _ <- setCountdown(Countdowns.changeRoom, ms)
+      yield ()
     private def setMode(mode: Mode): FSMState[Unit] =
       modified(_.update(mode = mode))
     private def incBattery(): FSMState[Unit] =

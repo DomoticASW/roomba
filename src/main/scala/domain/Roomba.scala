@@ -11,7 +11,9 @@ object Roomba extends RoombaOps:
       mode: Mode,
       currentRoom: String,
       chargingStationRoom: String,
-      rooms: Set[String]
+      rooms: Set[String],
+      batteryRateMs: Long,
+      changeRoomRateMs: Long
   )
 
   enum State:
@@ -31,7 +33,9 @@ object Roomba extends RoombaOps:
         mode: Mode,
         currentRoom: String,
         chargingStationRoom: String,
-        rooms: Set[String]
+        rooms: Set[String],
+        batteryRateMs: Long,
+        changeRoomRateMs: Long
     ): Either[BadConfiguration, Roomba] =
       for
         _ <- Either.leftIf(
@@ -44,13 +48,19 @@ object Roomba extends RoombaOps:
           battery >= 0 && battery <= 100,
           BadConfiguration("Given battery should be between 0 and 100")
         )
+        _ <- Either.leftIf(
+          batteryRateMs > 0 && changeRoomRateMs > 0,
+          BadConfiguration("Rates must be higher than 0 milliseconds")
+        )
       yield (RoombaImpl(
         name,
         battery,
         mode,
         currentRoom,
         chargingStationRoom,
-        rooms
+        rooms,
+        batteryRateMs,
+        changeRoomRateMs
       ))
 
   case class BadConfiguration(message: String)
@@ -62,6 +72,8 @@ object Roomba extends RoombaOps:
     def currentRoom: String = r.currentRoom
     def chargingStationRoom: String = r.chargingStationRoom
     def rooms: Set[String] = r.rooms
+    def batteryRateMs: Long = r.batteryRateMs
+    def changeRoomRateMs: Long = r.changeRoomRateMs
     def update(
         battery: Int,
         mode: Mode,
