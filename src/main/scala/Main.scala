@@ -1,4 +1,4 @@
-import fsm.RoombaFSM
+import domain.RoombaFSM
 import fsm.FSM.*
 import domain.Roomba.*
 

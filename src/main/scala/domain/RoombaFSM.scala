@@ -1,5 +1,6 @@
-package fsm
+package domain
 import scala.util.Random
+import fsm.FSM
 import domain.Roomba.*
 import domain.Roomba.State.*
 
