@@ -1,14 +1,12 @@
 val scala3Version = "3.7.0"
 
-enablePlugins(JavaAppPackaging)
-enablePlugins(DockerPlugin)
-
-packageName := "ventus218/domoticasw-roomba"
-
 lazy val root = project
   .in(file("."))
+  .enablePlugins(JavaAppPackaging, DockerPlugin)
   .settings(
     name := "roomba",
-    version := "0.1.0-SNAPSHOT",
-    scalaVersion := scala3Version
+    version := sys.env.getOrElse("VERSION", "0.1.0-SNAPSHOT"),
+    scalaVersion := scala3Version,
+    Docker / packageName := "ventus218/domoticasw-roomba",
+    dockerUpdateLatest := true
   )
