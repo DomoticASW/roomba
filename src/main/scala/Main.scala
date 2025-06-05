@@ -22,7 +22,7 @@ object MainFSM extends App:
       case Some("Silent")             => Right(Mode.Silent)
       case Some("DeepCleaning")       => Right(Mode.DeepCleaning)
       case Some("Performance") | None => Right(Mode.Performance)
-      case _ => Left(s"$modeStr is not a valid value for MODE")
+      case Some(other) => Left(s"$other is not a valid value for MODE")
     changeRoomRateMsStr <- Right(sys.env.get("CHANGE_ROOM_RATE_MS"))
     changeRoomRateMs <- batteryRateMsStr match
       case None => Right(4000)
@@ -44,12 +44,13 @@ object MainFSM extends App:
       rooms,
       batteryRateMs,
       changeRoomRateMs
-    )
+    ).left.map(_.message)
   yield (roomba)
 
   roomba match
-    case Left(err: String)           => Console.err.println(err)
-    case Left(BadConfiguration(err)) => Console.err.println(err)
+    case Left(err: String) =>
+      Console.err.println(err)
+      sys.exit(1)
     case Right(roomba) =>
       import RoombaFSM.{given}
 
