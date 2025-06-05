@@ -28,6 +28,20 @@ object FSM:
       val (d1, _) = summon[States[S, D, E]].onEntry(s).run(d)
       FSMImpl(s, d1)
 
+    def countdownReached[D](name: String): State[D, Boolean] = ???
+    def setCountdown[D](name: String, ms: Long): State[D, Unit] = ???
+    def resetCountdown[D](name: String): State[D, Unit] = ???
+    def resetCountdownIfReached[D](name: String): State[D, Boolean] =
+      for
+        reached <- countdownReached(name)
+        _ <- if reached then resetCountdown(name) else State.same
+      yield (reached)
+    def setCountdownIfReached[D](name: String, ms: Long): State[D, Boolean] =
+      for
+        reached <- countdownReached(name)
+        _ <- if reached then setCountdown(name, ms) else State.same
+      yield (reached)
+
   trait States[S, D, E]:
     def onEntry(s: S): State[D, Unit]
     def onActive(s: S, e: Option[E], timePassed: Long): State[D, S]

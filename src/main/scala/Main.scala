@@ -31,7 +31,7 @@ import domain.Roomba.*
 //   Thread.sleep(10000)
 //   simulation.enqueueInputs(Input.Stop)
 
-import fsm.RoombaFSM.*
+import fsm.RoombaFSM.{*, given}
 import fsm.FSM.*
 object MainFSM extends App:
 
@@ -43,9 +43,8 @@ object MainFSM extends App:
     "Bedroom",
     Set("Kitchen", "Bedroom", "Livingroom", "Bathroom")
   ).right.get
-  val model = Model(roomba, 500, 0, 2000, 0)
 
-  var fsm = FSM(State.Cleaning, model)
+  var fsm = FSM(State.Cleaning, roomba)
   while true do
     val period = 50
     Thread.sleep(period)
