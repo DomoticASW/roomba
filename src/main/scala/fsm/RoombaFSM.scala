@@ -32,17 +32,16 @@ object RoombaFSM:
 
   given States[RoombaState, Roomba, Event] with
     override def onEntry(): State[RoombaFSM, Unit] =
-      for
-        s <- currentState
-        _ <- s match
+      FSM.matchCurrentState:
+        (_: RoombaState) match
           case Cleaning =>
             for
               _ <- FSM.setCountdown("battery", batteryRate)
               _ <- FSM.setCountdown("changeRoom", changeRoomRate)
             yield ()
-          case GoingCharging => FSM.setCountdown("changeRoom", changeRoomRate)
-          case Charging      => FSM.setCountdown("battery", batteryRate)
-      yield ()
+          case GoingCharging =>
+            FSM.setCountdown("changeRoom", changeRoomRate)
+          case Charging => FSM.setCountdown("battery", batteryRate)
 
     override def onActive(
         e: Option[Event],
@@ -52,38 +51,36 @@ object RoombaFSM:
         _ <- e match
           case Some(Event.ChangeMode(mode)) => setMode(mode)
           case _                            => State.same
-        s <- currentState
-        nextState <- s match
-          case Cleaning =>
-            for
-              updateBattery <- FSM.resetCountdownIfReached("battery")
-              changeRoom <- FSM.resetCountdownIfReached("changeRoom")
-              _ <- if updateBattery then decBattery() else State.same
-              _ <- if changeRoom then changeRoomRandom() else State.same
-              battery <- FSM.inspect((_: Roomba).battery)
-              nextState =
-                if battery <= 10 || e == Some(Event.Stop) then GoingCharging
-                else Cleaning
-            yield (nextState)
-          case Charging =>
-            for
-              updateBattery <- FSM.resetCountdownIfReached("battery")
-              _ <- if updateBattery then incBattery() else State.same
-              nextState =
-                if e == Some(Event.Start) then Cleaning
-                else Charging
-            yield (nextState)
-          case GoingCharging =>
-            for
-              changeRoom <- FSM.resetCountdownIfReached("changeRoom")
-              _ <- if changeRoom then changeRoomRandom() else State.same
-              newRoom <- FSM.inspect((_: Roomba).currentRoom)
-              chargingStationRoom <- FSM.inspect(
-                (_: Roomba).chargingStationRoom
-              )
-              nextState =
-                if e == Some(Event.Start) then Cleaning
-                else if newRoom == chargingStationRoom then Charging
-                else GoingCharging
-            yield (nextState)
+        nextState <- FSM.matchCurrentState:
+          (_: RoombaState) match
+            case Cleaning =>
+              for
+                _ <- FSM.ifCountdownReached("battery")(decBattery())
+                _ <- FSM.ifCountdownReached("changeRoom")(changeRoomRandom())
+                _ <- FSM.resetCountdownIfReached("battery")
+                _ <- FSM.resetCountdownIfReached("changeRoom")
+                battery <- FSM.inspect((_: Roomba).battery)
+                nextState =
+                  if battery <= 10 || e == Some(Event.Stop) then GoingCharging
+                  else Cleaning
+              yield (nextState)
+            case Charging =>
+              for
+                _ <- FSM.ifCountdownReached("battery")(incBattery())
+                _ <- FSM.resetCountdownIfReached("battery")
+                nextState =
+                  if e == Some(Event.Start) then Cleaning
+                  else Charging
+              yield (nextState)
+            case GoingCharging =>
+              for
+                _ <- FSM.ifCountdownReached("changeRoom")(changeRoomRandom())
+                _ <- FSM.resetCountdownIfReached("changeRoom")
+                newRoom <- FSM.inspect((_: Roomba).currentRoom)
+                chargingRoom <- FSM.inspect((_: Roomba).chargingStationRoom)
+                nextState =
+                  if e == Some(Event.Start) then Cleaning
+                  else if newRoom == chargingRoom then Charging
+                  else GoingCharging
+              yield (nextState)
       yield (nextState)

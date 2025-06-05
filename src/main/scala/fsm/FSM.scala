@@ -40,6 +40,26 @@ object FSM:
       State.inspect(fsm => f(fsm.d))
     def same[S, D, E]: State[FSM[S, D, E], Unit] = State.same
 
+    def matchCurrentState[S, D, E, A](
+        f: S => State[FSM[S, D, E], A]
+    ): State[FSM[S, D, E], A] =
+      for
+        s <- currentState
+        res <- f(s)
+      yield (res)
+
+    def currentState[S, D, E]: State[FSM[S, D, E], S] = State.inspect(_.s)
+
+    def ifCountdownReached[S, D, E, A](
+        name: String
+    )(f: State[FSM[S, D, E], A]): State[FSM[S, D, E], Option[A]] =
+      for
+        reached <- countdownReached(name)
+        res <-
+          if reached then f.map(a => Some(a))
+          else State.pure(None)
+      yield (res)
+
     def countdownReached[S, D, E](name: String): State[FSM[S, D, E], Boolean] =
       State.inspect(_.c.get(name).map(_.value <= 0).getOrElse(false))
     def setCountdown[S, D, E](
@@ -72,5 +92,5 @@ object FSM:
     def currentState: State[FSM[S, D, E], S] = State.inspect(_.s)
     def onEntry(): State[FSM[S, D, E], Unit] = State.same
     def onActive(e: Option[E], timePassed: Long): State[FSM[S, D, E], S] =
-      State(fsm => (fsm, fsm.s))
+      currentState
     def onExit(): State[FSM[S, D, E], Unit] = State.same
