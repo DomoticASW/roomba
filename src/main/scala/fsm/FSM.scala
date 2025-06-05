@@ -34,6 +34,8 @@ object FSM:
       val fsm1 = FSMImpl[S, D, E](s, d, Map.empty)
       S.onEntry().run(fsm1)._1
 
+    /* UTILS FOR WORKING WITH STATE */
+
     def modified[S, D, E](f: D => D): State[FSM[S, D, E], Unit] =
       State.modify(fsm => fsm.copy(d = f(fsm.d)))
     def inspect[S, D, E, A](f: D => A): State[FSM[S, D, E], A] =
@@ -50,25 +52,22 @@ object FSM:
 
     def currentState[S, D, E]: State[FSM[S, D, E], S] = State.inspect(_.s)
 
-    def ifCountdownReached[S, D, E, A](
-        name: String
-    )(f: State[FSM[S, D, E], A]): State[FSM[S, D, E], Option[A]] =
-      for
-        reached <- countdownReached(name)
-        res <-
-          if reached then f.map(a => Some(a))
-          else State.pure(None)
-      yield (res)
+    /* COUNTDOWNS BASICS */
 
     def countdownReached[S, D, E](name: String): State[FSM[S, D, E], Boolean] =
       State.inspect(_.c.get(name).map(_.value <= 0).getOrElse(false))
+
     def setCountdown[S, D, E](
         name: String,
         ms: Long
     ): State[FSM[S, D, E], Unit] =
       State.modify(fsm => fsm.copy(c = fsm.c + (name -> Countdown(ms, ms))))
+
     def resetCountdown[S, D, E](name: String): State[FSM[S, D, E], Unit] =
       State.modify(fsm => fsm.copy(c = fsm.c.updatedWith(name)(_.map(_.reset))))
+
+    /* COUNTDOWNS UTILS */
+
     def resetCountdownIfReached[S, D, E](
         name: String
     ): State[FSM[S, D, E], Boolean] =
@@ -84,6 +83,16 @@ object FSM:
         reached <- countdownReached(name)
         _ <- if reached then setCountdown(name, ms) else State.same
       yield (reached)
+
+    def ifCountdownReached[S, D, E, A](
+        name: String
+    )(f: State[FSM[S, D, E], A]): State[FSM[S, D, E], Option[A]] =
+      for
+        reached <- countdownReached(name)
+        res <-
+          if reached then f.map(a => Some(a))
+          else State.pure(None)
+      yield (res)
 
   private def updateCountdowns[S, D, E](ms: Long): State[FSM[S, D, E], Unit] =
     State.modify(fsm => fsm.copy(c = fsm.c.mapValues(_.decrement(ms)).toMap))
