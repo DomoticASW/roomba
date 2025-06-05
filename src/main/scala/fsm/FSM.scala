@@ -13,7 +13,7 @@ object FSM:
     def decrement(ms: Long): Countdown = Countdown(value - ms, resetValue)
 
   extension [S, D, E](fsm: FSM[S, D, E])
-    def step(ms: Long, e: Option[E])(using S: States[S, D, E]): FSM[S, D, E] =
+    def step(ms: Long, e: Option[E])(using S: FSMState[S, D, E]): FSM[S, D, E] =
       val step = for
         _ <- updateCountdowns(ms)
         prevState <- S.currentState
@@ -30,27 +30,39 @@ object FSM:
       step.run(fsm)._1
 
   object FSM:
-    def apply[S, D, E](s: S, d: D)(using S: States[S, D, E]): FSM[S, D, E] =
+    def apply[S, D, E](s: S, d: D)(using S: FSMState[S, D, E]): FSM[S, D, E] =
       val fsm1 = FSMImpl[S, D, E](s, d, Map.empty)
       S.onEntry().run(fsm1)._1
 
+  private def updateCountdowns[S, D, E](ms: Long): State[FSM[S, D, E], Unit] =
+    State.modify(fsm => fsm.copy(c = fsm.c.mapValues(_.decrement(ms)).toMap))
+
+  trait FSMState[S, D, E]:
+    type FSMState[A] = State[FSM[S, D, E], A]
+
+    def currentState: FSMState[S] = State.inspect(_.s)
+
+    def onEntry(): FSMState[Unit] = State.same
+
+    def onActive(e: Option[E], timePassed: Long): FSMState[S] = currentState
+
+    def onExit(): FSMState[Unit] = State.same
+
     /* UTILS FOR WORKING WITH STATE */
 
-    def modified[S, D, E](f: D => D): State[FSM[S, D, E], Unit] =
+    def modified(f: D => D): State[FSM[S, D, E], Unit] =
       State.modify(fsm => fsm.copy(d = f(fsm.d)))
-    def inspect[S, D, E, A](f: D => A): State[FSM[S, D, E], A] =
+    def inspect[A](f: D => A): State[FSM[S, D, E], A] =
       State.inspect(fsm => f(fsm.d))
-    def same[S, D, E]: State[FSM[S, D, E], Unit] = State.same
+    def same: State[FSM[S, D, E], Unit] = State.same
 
-    def matchCurrentState[S, D, E, A](
+    def matchCurrentState[A](
         f: S => State[FSM[S, D, E], A]
     ): State[FSM[S, D, E], A] =
       for
         s <- currentState
         res <- f(s)
       yield (res)
-
-    def currentState[S, D, E]: State[FSM[S, D, E], S] = State.inspect(_.s)
 
     /* COUNTDOWNS BASICS */
 
@@ -93,13 +105,3 @@ object FSM:
           if reached then f.map(a => Some(a))
           else State.pure(None)
       yield (res)
-
-  private def updateCountdowns[S, D, E](ms: Long): State[FSM[S, D, E], Unit] =
-    State.modify(fsm => fsm.copy(c = fsm.c.mapValues(_.decrement(ms)).toMap))
-
-  trait States[S, D, E]:
-    def currentState: State[FSM[S, D, E], S] = State.inspect(_.s)
-    def onEntry(): State[FSM[S, D, E], Unit] = State.same
-    def onActive(e: Option[E], timePassed: Long): State[FSM[S, D, E], S] =
-      currentState
-    def onExit(): State[FSM[S, D, E], Unit] = State.same
