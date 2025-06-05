@@ -1,39 +1,15 @@
+import fsm.RoombaFSM
+import fsm.FSM.*
 import domain.Roomba.*
 
-// object MainSimulation extends App:
-//   import domain.Simulation
-//   import domain.Simulation.SimulationListener
-//   import domain.Simulation.Input
-//   val initialState = Roomba(
-//     "R",
-//     50,
-//     Mode.Silent,
-//     "Kitchen",
-//     "Bedroom",
-//     Set("Kitchen", "Bedroom", "Livingroom", "Bathroom")
-//   ).right.get
+object MyRoombaFSM
+    extends fsm.RoombaFSM(
+      batteryRateMs = 1000,
+      changeRoomRateMs = 4000
+    )
 
-//   val simulation = Simulation(
-//     initialState,
-//     0,
-//     0,
-//     500,
-//     Set(new SimulationListener {
-
-//       override def onSimulationStep(r: Roomba): Unit = println(r)
-
-//     })
-//   )
-//   simulation.start()
-
-//   Thread.sleep(5000)
-//   simulation.enqueueInputs(Input.Start)
-//   Thread.sleep(10000)
-//   simulation.enqueueInputs(Input.Stop)
-
-import fsm.RoombaFSM.{*, given}
-import fsm.FSM.*
 object MainFSM extends App:
+  import MyRoombaFSM.{*, given}
 
   val roomba = Roomba(
     "R",

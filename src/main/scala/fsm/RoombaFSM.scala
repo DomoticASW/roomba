@@ -3,17 +3,18 @@ import scala.util.Random
 import domain.Roomba.*
 import domain.Roomba.State.*
 
-object RoombaFSM:
+trait RoombaFSM(val batteryRateMs: Long, val changeRoomRateMs: Long):
 
   enum Event:
     case ChangeMode(m: Mode)
     case Start
     case Stop
 
-  import FSM.*
+  object Countdowns:
+    val battery = "battery"
+    val changeRoom = "changeRoom"
 
-  val batteryRate = 1000
-  val changeRoomRate = 4000
+  import FSM.*
 
   given FSMState[State, Roomba, Event] with
     override def onEntry(): FSMState[Unit] =
@@ -21,12 +22,12 @@ object RoombaFSM:
         _ match
           case Cleaning =>
             for
-              _ <- setCountdown("battery", batteryRate)
-              _ <- setCountdown("changeRoom", changeRoomRate)
+              _ <- setCountdown(Countdowns.battery, batteryRateMs)
+              _ <- setCountdown(Countdowns.changeRoom, changeRoomRateMs)
             yield ()
           case GoingCharging =>
-            setCountdown("changeRoom", changeRoomRate)
-          case Charging => setCountdown("battery", batteryRate)
+            setCountdown(Countdowns.changeRoom, changeRoomRateMs)
+          case Charging => setCountdown(Countdowns.battery, batteryRateMs)
 
     override def onActive(e: Option[Event], timePassed: Long): FSMState[State] =
       for
@@ -37,10 +38,12 @@ object RoombaFSM:
           _ match
             case Cleaning =>
               for
-                _ <- ifCountdownReached("battery")(decBattery())
-                _ <- ifCountdownReached("changeRoom")(changeRoomRandom())
-                _ <- resetCountdownIfReached("battery")
-                _ <- resetCountdownIfReached("changeRoom")
+                _ <- ifCountdownReached(Countdowns.battery)(decBattery())
+                _ <- ifCountdownReached(Countdowns.changeRoom)(
+                  changeRoomRandom()
+                )
+                _ <- resetCountdownIfReached(Countdowns.battery)
+                _ <- resetCountdownIfReached(Countdowns.changeRoom)
                 battery <- inspect(_.battery)
                 nextState =
                   if battery <= 10 || e == Some(Event.Stop) then GoingCharging
@@ -48,16 +51,18 @@ object RoombaFSM:
               yield (nextState)
             case Charging =>
               for
-                _ <- ifCountdownReached("battery")(incBattery())
-                _ <- resetCountdownIfReached("battery")
+                _ <- ifCountdownReached(Countdowns.battery)(incBattery())
+                _ <- resetCountdownIfReached(Countdowns.battery)
                 nextState =
                   if e == Some(Event.Start) then Cleaning
                   else Charging
               yield (nextState)
             case GoingCharging =>
               for
-                _ <- ifCountdownReached("changeRoom")(changeRoomRandom())
-                _ <- resetCountdownIfReached("changeRoom")
+                _ <- ifCountdownReached(Countdowns.changeRoom)(
+                  changeRoomRandom()
+                )
+                _ <- resetCountdownIfReached(Countdowns.changeRoom)
                 newRoom <- inspect(_.currentRoom)
                 chargingRoom <- inspect(_.chargingStationRoom)
                 nextState =
