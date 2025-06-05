@@ -1,11 +1,9 @@
 package fsm
-
-import state.State.State
+import scala.util.Random
+import domain.Roomba.*
+import domain.Roomba.State.*
 
 object RoombaFSM:
-  import scala.util.Random
-  import domain.Roomba.{State as RoombaState, *}
-  import RoombaState.*
 
   enum Event:
     case ChangeMode(m: Mode)
@@ -17,10 +15,10 @@ object RoombaFSM:
   val batteryRate = 1000
   val changeRoomRate = 4000
 
-  given FSMState[RoombaState, Roomba, Event] with
+  given FSMState[State, Roomba, Event] with
     override def onEntry(): FSMState[Unit] =
       matchCurrentState:
-        (_: RoombaState) match
+        _ match
           case Cleaning =>
             for
               _ <- setCountdown("battery", batteryRate)
@@ -30,16 +28,13 @@ object RoombaFSM:
             setCountdown("changeRoom", changeRoomRate)
           case Charging => setCountdown("battery", batteryRate)
 
-    override def onActive(
-        e: Option[Event],
-        timePassed: Long
-    ): FSMState[RoombaState] =
+    override def onActive(e: Option[Event], timePassed: Long): FSMState[State] =
       for
         _ <- e match
           case Some(Event.ChangeMode(mode)) => setMode(mode)
-          case _                            => State.same
+          case _                            => same
         nextState <- matchCurrentState:
-          (_: RoombaState) match
+          _ match
             case Cleaning =>
               for
                 _ <- ifCountdownReached("battery")(decBattery())
