@@ -38,6 +38,16 @@ def parseMode: Either[String, Mode] =
       case Some(other) => Left(s"$other is not a valid value for MODE")
   yield (mode)
 
+def parseInitialState: Either[String, State] =
+  for
+    stateStr <- Right(sys.env.get("STATE"))
+    state <- stateStr match
+      case Some("Charging")        => Right(State.Charging)
+      case Some("GoingCharging")   => Right(State.GoingCharging)
+      case Some("Cleaning") | None => Right(State.Cleaning)
+      case Some(other) => Left(s"$other is not a valid value for STATE")
+  yield (state)
+
 def parseRooms: Either[String, Set[String]] =
   for
     roomsStr <- Right(
@@ -60,7 +70,9 @@ object MainFSM extends App:
     rooms <- parseRooms
     initRoom <- Right(sys.env.get("INIT_ROOM").getOrElse(rooms.head))
     chargingRoom <- Right(sys.env.get("CHARGING_ROOM").getOrElse(rooms.last))
+    initialState <- parseInitialState
     roomba <- Roomba(
+      initialState,
       name,
       battery,
       mode,
@@ -79,7 +91,7 @@ object MainFSM extends App:
     case Right(roomba) =>
       import RoombaFSM.{given}
 
-      var fsm = FSM(State.Cleaning, roomba)
+      var fsm = FSM(roomba)
       while true do
         val period = 50
         Thread.sleep(period)
