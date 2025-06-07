@@ -5,7 +5,7 @@ import state.State.*
 object FSM:
 
   opaque type FSM[S, D, E] = FSMImpl[S, D, E]
-  private case class FSMImpl[S, D, E](d: D, c: Countdowns)
+  private case class FSMImpl[S, D, E](s: S, d: D, c: Countdowns)
 
   private type Countdowns = Map[String, Countdown]
   private case class Countdown(value: Long, resetValue: Long):
@@ -22,7 +22,7 @@ object FSM:
           if newState != prevState then
             for
               _ <- S.onExit()
-              _ <- S.setCurrentState(newState)
+              _ <- State.modify((_: FSM[S, D, E]).copy(s = newState))
               _ <- S.onEntry()
             yield ()
           else State.same
@@ -30,8 +30,8 @@ object FSM:
       step.run(fsm)._1
 
   object FSM:
-    def apply[S, D, E](d: D)(using S: FSMState[S, D, E]): FSM[S, D, E] =
-      val fsm1 = FSMImpl[S, D, E](d, Map.empty)
+    def apply[S, D, E](s: S, d: D)(using S: FSMState[S, D, E]): FSM[S, D, E] =
+      val fsm1 = FSMImpl[S, D, E](s, d, Map.empty)
       S.onEntry().run(fsm1)._1
 
   private def updateCountdowns[S, D, E](ms: Long): State[FSM[S, D, E], Unit] =
@@ -40,8 +40,7 @@ object FSM:
   trait FSMState[S, D, E]:
     type FSMState[A] = State[FSM[S, D, E], A]
 
-    def currentState: FSMState[S]
-    def setCurrentState(s: S): FSMState[Unit]
+    def currentState: FSMState[S] = State.inspect(_.s)
 
     def onEntry(): FSMState[Unit] = State.same
 

@@ -18,10 +18,6 @@ object RoombaFSM:
   import FSM.*
 
   given FSMState[State, Roomba, Event] with
-
-    def currentState: FSMState[State] = inspect(_.state)
-    def setCurrentState(s: State): FSMState[Unit] =
-      modified(r => r.update(state = s))
     override def onEntry(): FSMState[Unit] =
       matchCurrentState:
         _ match

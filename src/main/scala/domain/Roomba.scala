@@ -6,7 +6,6 @@ object Roomba extends RoombaOps:
 
   opaque type Roomba = RoombaImpl
   private case class RoombaImpl(
-      state: State,
       name: String,
       battery: Int,
       mode: Mode,
@@ -29,7 +28,6 @@ object Roomba extends RoombaOps:
 
   object Roomba:
     def apply(
-        state: State,
         name: String,
         battery: Int,
         mode: Mode,
@@ -55,7 +53,6 @@ object Roomba extends RoombaOps:
           BadConfiguration("Rates must be higher than 0 milliseconds")
         )
       yield (RoombaImpl(
-        state,
         name,
         battery,
         mode,
@@ -69,7 +66,6 @@ object Roomba extends RoombaOps:
   case class BadConfiguration(message: String)
 
   extension (r: Roomba)
-    def state: State = r.state
     def name: String = r.name
     def battery: Int = r.battery
     def mode: Mode = r.mode
@@ -79,13 +75,11 @@ object Roomba extends RoombaOps:
     def batteryRateMs: Long = r.batteryRateMs
     def changeRoomRateMs: Long = r.changeRoomRateMs
     def update(
-        state: State,
         battery: Int,
         mode: Mode,
         currentRoom: String
     ): Roomba =
       r.copy(
-        state = state,
         battery = battery,
         mode = mode,
         currentRoom = currentRoom
@@ -94,17 +88,13 @@ object Roomba extends RoombaOps:
 trait RoombaOps:
   import Roomba.*
   extension (r: Roomba)
-    def state: State
     def name: String
     def battery: Int
     def mode: Mode
     def currentRoom: String
     def chargingStationRoom: String
     def rooms: Set[String]
-    def batteryRateMs: Long
-    def changeRoomRateMs: Long
     def update(
-        state: State = r.state,
         battery: Int = r.battery,
         mode: Mode = r.mode,
         currentRoom: String = r.currentRoom
