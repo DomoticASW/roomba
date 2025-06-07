@@ -1,4 +1,6 @@
 import domain.Roomba.*
+import domain.RoombaAgent
+import adapters.ServerHttpAdapter
 
 def parseBattery: Either[String, Int] =
   for
@@ -87,9 +89,9 @@ object MainFSM extends App:
       Console.err.println(err)
       sys.exit(1)
     case Right(roomba) =>
-      var r = roomba
-      while true do
-        val period = 50
-        Thread.sleep(period)
-        r = r.step(period, None)
-        println(r.state)
+      val roombaAgent = RoombaAgent(roomba, 50)
+      roombaAgent.start()
+
+      Thread.sleep(5000)
+      roombaAgent.setShouldStop()
+      roombaAgent.join()
