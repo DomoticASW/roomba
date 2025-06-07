@@ -29,13 +29,19 @@ object FSM:
       yield (newState)
       step.run(fsm)._1
 
+    def data: D = fsm.d
+
+    def state: S = fsm.s
+
   object FSM:
     def apply[S, D, E](s: S, d: D)(using S: FSMState[S, D, E]): FSM[S, D, E] =
       val fsm1 = FSMImpl[S, D, E](s, d, Map.empty)
       S.onEntry().run(fsm1)._1
 
   private def updateCountdowns[S, D, E](ms: Long): State[FSM[S, D, E], Unit] =
-    State.modify(fsm => fsm.copy(c = fsm.c.mapValues(_.decrement(ms)).toMap))
+    State.modify(fsm =>
+      fsm.copy(c = fsm.c.view.mapValues(_.decrement(ms)).toMap)
+    )
 
   trait FSMState[S, D, E]:
     type FSMState[A] = State[FSM[S, D, E], A]
@@ -50,15 +56,13 @@ object FSM:
 
     /* UTILS FOR WORKING WITH STATE */
 
-    def modified(f: D => D): State[FSM[S, D, E], Unit] =
+    def modified(f: D => D): FSMState[Unit] =
       State.modify(fsm => fsm.copy(d = f(fsm.d)))
-    def inspect[A](f: D => A): State[FSM[S, D, E], A] =
+    def inspect[A](f: D => A): FSMState[A] =
       State.inspect(fsm => f(fsm.d))
-    def same: State[FSM[S, D, E], Unit] = State.same
+    def same: FSMState[Unit] = State.same
 
-    def matchCurrentState[A](
-        f: S => State[FSM[S, D, E], A]
-    ): State[FSM[S, D, E], A] =
+    def matchCurrentState[A](f: S => FSMState[A]): FSMState[A] =
       for
         s <- currentState
         res <- f(s)
@@ -66,39 +70,32 @@ object FSM:
 
     /* COUNTDOWNS BASICS */
 
-    def countdownReached[S, D, E](name: String): State[FSM[S, D, E], Boolean] =
+    def countdownReached(name: String): FSMState[Boolean] =
       State.inspect(_.c.get(name).map(_.value <= 0).getOrElse(false))
 
-    def setCountdown[S, D, E](
-        name: String,
-        ms: Long
-    ): State[FSM[S, D, E], Unit] =
+    def setCountdown(name: String, ms: Long): FSMState[Unit] =
       State.modify(fsm => fsm.copy(c = fsm.c + (name -> Countdown(ms, ms))))
 
-    def resetCountdown[S, D, E](name: String): State[FSM[S, D, E], Unit] =
+    def resetCountdown(name: String): FSMState[Unit] =
       State.modify(fsm => fsm.copy(c = fsm.c.updatedWith(name)(_.map(_.reset))))
 
     /* COUNTDOWNS UTILS */
 
-    def resetCountdownIfReached[S, D, E](
-        name: String
-    ): State[FSM[S, D, E], Boolean] =
+    def resetCountdownIfReached(name: String): FSMState[Boolean] =
       for
         reached <- countdownReached(name)
         _ <- if reached then resetCountdown(name) else State.same
       yield (reached)
-    def setCountdownIfReached[S, D, E](
-        name: String,
-        ms: Long
-    ): State[FSM[S, D, E], Boolean] =
+
+    def setCountdownIfReached(name: String, ms: Long): FSMState[Boolean] =
       for
         reached <- countdownReached(name)
         _ <- if reached then setCountdown(name, ms) else State.same
       yield (reached)
 
-    def ifCountdownReached[S, D, E, A](
+    def ifCountdownReached[A](
         name: String
-    )(f: State[FSM[S, D, E], A]): State[FSM[S, D, E], Option[A]] =
+    )(f: FSMState[A]): FSMState[Option[A]] =
       for
         reached <- countdownReached(name)
         res <-
