@@ -110,9 +110,13 @@ private[domain] object RoombaFSM:
       yield ()
     private def setMode(mode: Mode): FSMState[Unit] =
       modified(_.copy(mode = mode))
-    private def incBattery(): FSMState[Unit] =
-      modified(r => r.copy(battery = r.battery + 1))
-    private def decBattery(): FSMState[Unit] =
-      modified(r => r.copy(battery = r.battery - 1))
+    private def incBattery(): FSMState[Unit] = modified: r =>
+      r.battery match
+        case b if b < 100 => r.copy(battery = b + 1)
+        case _            => r
+    private def decBattery(): FSMState[Unit] = modified: r =>
+      r.battery match
+        case b if b > 0 => r.copy(battery = b - 1)
+        case _          => r
     private def changeRoomRandom(): FSMState[Unit] =
       modified(r => r.copy(currentRoom = Random().shuffle(r.rooms).head))
