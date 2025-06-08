@@ -20,7 +20,7 @@ object DomoticASWDeviceHttpInterface:
   given RootJsonFormat[BadRequest] = jsonFormat1(BadRequest.apply)
   case class NotFound(message: String)
   given RootJsonFormat[NotFound] = jsonFormat1(NotFound.apply)
-  case class ExecuteActionBody(input: String)
+  case class ExecuteActionBody(input: Option[String])
   given RootJsonFormat[ExecuteActionBody] = jsonFormat1(ExecuteActionBody.apply)
 
   def badActionIdMessage(action: String) =
@@ -34,7 +34,7 @@ object DomoticASWDeviceHttpInterface:
       .newServerAt("localhost", 8080)
       .bind:
         // TODO: add other paths
-        (path("/execute" / Segment) & entity(as[ExecuteActionBody])):
+        (path("execute" / Segment) & entity(as[ExecuteActionBody])):
           // TODO: proper error when unmarshalling fails
           (segment, body) =>
             val event = segment match
@@ -42,10 +42,11 @@ object DomoticASWDeviceHttpInterface:
               case "stop"  => Right(Stop)
               case "setMode" =>
                 body.input match
-                  case "Silent"        => Right(ChangeMode(Silent))
-                  case "Performance"   => Right(ChangeMode(Performance))
-                  case "Deep Cleaning" => Right(ChangeMode(DeepCleaning))
-                  case m               => Left(BadRequest(badModeMessage(m)))
+                  case Some("Silent")        => Right(ChangeMode(Silent))
+                  case Some("Performance")   => Right(ChangeMode(Performance))
+                  case Some("Deep Cleaning") => Right(ChangeMode(DeepCleaning))
+                  case Some(m) => Left(BadRequest(badModeMessage(m)))
+                  case None    => Left(BadRequest(badModeMessage("null")))
               case _ => Left(NotFound(badActionIdMessage(segment)))
             post:
               event match
