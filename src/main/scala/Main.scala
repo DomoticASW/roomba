@@ -1,6 +1,5 @@
 import domain.Roomba.*
 import domain.RoombaAgent
-import adapters.ServerHttpAdapter
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import adapters.DomoticASWDeviceHttpInterface
@@ -95,8 +94,5 @@ object MainFSM extends App:
       val roombaAgent = RoombaAgent(roomba, 50)
       roombaAgent.start()
 
-      roombaAgent.registerToServer(
-        ServerHttpAdapter(using ExecutionContext.global)
-      )
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")
       DomoticASWDeviceHttpInterface("0.0.0.0", 8080, roombaAgent)
