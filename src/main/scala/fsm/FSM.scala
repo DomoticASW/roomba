@@ -10,7 +10,8 @@ object FSM:
   private type Countdowns = Map[String, Countdown]
   private case class Countdown(value: Long, resetValue: Long):
     def reset: Countdown = Countdown(resetValue, resetValue)
-    def decrement(ms: Long): Countdown = Countdown(value - ms, resetValue)
+    def decrement(ms: Long): Countdown =
+      Countdown(math.max(value - ms, 0), resetValue)
 
   extension [S, D, E](fsm: FSM[S, D, E])
     def step(ms: Long, e: Option[E])(using S: FSMState[S, D, E]): FSM[S, D, E] =
@@ -93,9 +94,8 @@ object FSM:
         _ <- if reached then setCountdown(name, ms) else State.same
       yield (reached)
 
-    def ifCountdownReached[A](
-        name: String
-    )(f: FSMState[A]): FSMState[Option[A]] =
+    def ifCountdownReached[A](name: String)(f: FSMState[A])
+      : FSMState[Option[A]] =
       for
         reached <- countdownReached(name)
         res <-
