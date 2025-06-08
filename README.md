@@ -12,8 +12,6 @@ For example `docker run -e NAME=MyRoomba -e BATTERY=10 ventus218/domoticasw-room
 
 | Variable name       | Default value                          | Explanation                  | Admissible values                 |
 | ------------------- | -------------------------------------- | ---------------------------- | --------------------------------- |
-| HOST                | 0.0.0.0                                | Web server host              | Any IPv4 interface                |
-| PORT                | 8080                                   | Web server port              | Any available port                |
 | NAME                | Roomba                                 | Robot name                   | Any string                        |
 | BATTERY             | 50                                     | Initial battery level        | 0–100                             |
 | BATTERY_RATE_MS     | 1000                                   | Battery update interval (ms) | Integers >= 0                     |

@@ -7,15 +7,6 @@ import adapters.DomoticASWDeviceHttpInterface
 import scala.concurrent.ExecutionContext
 
 object MainFSM extends App:
-  def parsePort: Either[String, Int] =
-    for
-      portStr <- Right(sys.env.get("PORT"))
-      port <- portStr match
-        case None => Right(8080)
-        case Some(value) =>
-          value.toIntOption.toRight("Port should be integer")
-    yield (port)
-
   def parseBattery: Either[String, Int] =
     for
       batteryStr <- Right(sys.env.get("BATTERY"))
@@ -74,8 +65,6 @@ object MainFSM extends App:
     yield (state)
 
   val config = for
-    host <- Right(sys.env.getOrElse("HOST", "0.0.0.0"))
-    port <- parsePort
     name <- Right(sys.env.get("NAME").getOrElse("Roomba"))
     battery <- parseBattery
     batteryRateMs <- parseBatteryRate
@@ -96,13 +85,13 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield (host, port, roomba)
+  yield roomba
 
   config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(host, port, roomba) =>
+    case Right(roomba) =>
       val roombaAgent = RoombaAgent(roomba, 50)
       roombaAgent.start()
 
@@ -110,4 +99,4 @@ object MainFSM extends App:
         ServerHttpAdapter(using ExecutionContext.global)
       )
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")
-      DomoticASWDeviceHttpInterface(host, port, roombaAgent)
+      DomoticASWDeviceHttpInterface("0.0.0.0", 8080, roombaAgent)

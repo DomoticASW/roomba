@@ -13,5 +13,6 @@ lazy val root = project
     libraryDependencies += "org.apache.pekko" %% "pekko-stream" % "1.1.3",
     libraryDependencies += "org.apache.pekko" %% "pekko-actor-typed" % "1.1.3",
     Docker / packageName := "ventus218/domoticasw-roomba",
+    dockerExposedPorts += 8080,
     dockerUpdateLatest := true
   )
