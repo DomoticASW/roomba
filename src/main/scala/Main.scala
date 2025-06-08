@@ -4,8 +4,18 @@ import adapters.ServerHttpAdapter
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import adapters.DomoticASWDeviceHttpInterface
+import scala.concurrent.ExecutionContext
 
 object MainFSM extends App:
+  def parsePort: Either[String, Int] =
+    for
+      portStr <- Right(sys.env.get("PORT"))
+      port <- portStr match
+        case None => Right(8080)
+        case Some(value) =>
+          value.toIntOption.toRight("Port should be integer")
+    yield (port)
+
   def parseBattery: Either[String, Int] =
     for
       batteryStr <- Right(sys.env.get("BATTERY"))
@@ -63,7 +73,9 @@ object MainFSM extends App:
         case Some(other) => Left(s"$other is not a valid value for STATE")
     yield (state)
 
-  val roomba = for
+  val config = for
+    host <- Right(sys.env.getOrElse("HOST", "0.0.0.0"))
+    port <- parsePort
     name <- Right(sys.env.get("NAME").getOrElse("Roomba"))
     battery <- parseBattery
     batteryRateMs <- parseBatteryRate
@@ -84,15 +96,18 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield (roomba)
+  yield (host, port, roomba)
 
-  roomba match
+  config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(roomba) =>
+    case Right(host, port, roomba) =>
       val roombaAgent = RoombaAgent(roomba, 50)
       roombaAgent.start()
 
+      roombaAgent.registerToServer(
+        ServerHttpAdapter(using ExecutionContext.global)
+      )
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")
-      DomoticASWDeviceHttpInterface("localhost", 8080, roombaAgent)
+      DomoticASWDeviceHttpInterface(host, port, roombaAgent)

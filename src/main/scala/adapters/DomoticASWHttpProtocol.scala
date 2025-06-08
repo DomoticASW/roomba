@@ -1,19 +1,18 @@
 package adapters
 
+import scala.concurrent.Future
 import org.apache.pekko
 import pekko.actor.typed.ActorSystem
 import pekko.http.scaladsl.Http
+import pekko.http.scaladsl.Http.ServerBinding
 import pekko.http.scaladsl.model._
 import pekko.http.scaladsl.server.Directives._
 import pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport.{*, given}
 import spray.json.DefaultJsonProtocol.{*, given}
-import spray.json.RootJsonFormat
-import spray.json.JsonFormat
+import spray.json.*
 import domain.RoombaAgent
 import domain.Roomba.Event.*
 import domain.Roomba.Mode.*
-import org.apache.pekko.http.scaladsl.Http.ServerBinding
-import scala.concurrent.Future
 
 object DomoticASWDeviceHttpInterface:
   case class BadRequest(message: String)
@@ -31,7 +30,7 @@ object DomoticASWDeviceHttpInterface:
   def apply(host: String, port: Int, roombaAgent: RoombaAgent)
     (using a: ActorSystem[Any]): Future[ServerBinding] =
     Http()
-      .newServerAt("localhost", 8080)
+      .newServerAt(host, port)
       .bind:
         // TODO: add other paths
         (path("execute" / Segment) & entity(as[ExecuteActionBody])):
