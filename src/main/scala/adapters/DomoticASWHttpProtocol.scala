@@ -14,6 +14,79 @@ import domain.RoombaAgent
 import domain.Roomba.Event.*
 import domain.Roomba.Mode.*
 
+val registerJSONExample = """
+{
+  "id": "128012392139102821"
+  "name": "Roomba"
+  "properties": [
+    {
+      "id": "battery",
+      "name": "Battery",
+      "value": 50,
+      "typeConstraints": {
+        "constraint": "IntRange",
+        "min": 0,
+        "max": 100
+      }
+    },
+    {
+      "id": "state",
+      "name": "State",
+      "value": "Cleaning",
+      "typeConstraints": {
+        "constraint": "Enum",
+        "values": ["Charging", "Cleaning", "Going charging"]
+      }
+    },
+    {
+      "id": "mode",
+      "name": "Mode",
+      "value": "Silent",
+      "setterActionId": "setMode"
+    },
+    {
+      "id": "currentRoom",
+      "name": "Current room",
+      "value": "Bathroom",
+      "typeConstraints": {
+        "type": "String",
+        "constraint": None
+      }
+    },
+  ]
+  "actions": [
+    {
+      "id": "start",
+      "name": "Start",
+      "description": "The roomba will start cleaning",
+      "inputTypeConstraints": {
+        "type": "Void",
+        "constraint": "None"
+      }
+    },
+    {
+      "id": "stop",
+      "name": "Stop",
+      "description": "The roomba will stop cleaning and return to its charging station",
+      "inputTypeConstraints": {
+        "type": "Void",
+        "constraint": "None"
+      }
+    },
+    {
+      "id": "setMode",
+      "name": "Set mode",
+      "description": null,
+      "inputTypeConstraints": {
+        "constraint": "Enum",
+        "values": ["Silent", "DeepCleaning", "Performance"]
+      }
+    }
+  ]
+  "events": ["started", "stopped", "low-battery"]
+}
+"""
+
 object DomoticASWDeviceHttpInterface:
   case class BadRequest(message: String)
   given RootJsonFormat[BadRequest] = jsonFormat1(BadRequest.apply)
