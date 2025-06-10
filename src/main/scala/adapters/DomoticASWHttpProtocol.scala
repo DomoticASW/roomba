@@ -22,14 +22,6 @@ object DomoticASWDeviceHttpInterface:
   case class NotFound(message: String)
   case class ExecuteActionBody(input: Option[String])
 
-  def roombaRegistration(a: RoombaAgent) = DeviceRegistration(
-    UUID.randomUUID().toString(),
-    a.roomba.name,
-    Seq(),
-    Seq(),
-    Seq()
-  )
-
   def badActionIdMessage(action: String) =
     s"Action \"$action\" not found, known actions are [\"start\", \"stop\", \"setMode\"]"
   def badModeMessage(mode: String) =
@@ -48,7 +40,7 @@ object DomoticASWDeviceHttpInterface:
               val event = segment match
                 case "start" => Right(Start)
                 case "stop"  => Right(Stop)
-                case "setMode" =>
+                case "set-mode" =>
                   body.input match
                     case Some("Silent")      => Right(ChangeMode(Silent))
                     case Some("Performance") => Right(ChangeMode(Performance))
@@ -71,6 +63,69 @@ object DomoticASWDeviceHttpInterface:
             complete(StatusCodes.OK, roombaRegistration(roombaAgent))
         )
 
+  def roombaRegistration(a: RoombaAgent) = DeviceRegistration(
+    UUID.randomUUID().toString(),
+    a.roomba.name,
+    Seq(
+      DeviceProperty.WithTypeConstraint(
+        "state",
+        "State",
+        a.roomba.state.toString(),
+        TypeConstraints.None(Type.String)
+      ),
+      DeviceProperty.WithTypeConstraint(
+        "battery",
+        "Battery",
+        a.roomba.battery,
+        TypeConstraints.IntRange(0, 100)
+      ),
+      DeviceProperty.WithSetter(
+        "mode",
+        "Mode",
+        a.roomba.mode.toString(),
+        "set-mode"
+      ),
+      DeviceProperty.WithTypeConstraint(
+        "current-room",
+        "Current room",
+        a.roomba.currentRoom,
+        TypeConstraints.None(Type.String)
+      ),
+      DeviceProperty.WithTypeConstraint(
+        "charging-station-room",
+        "Charging station room",
+        a.roomba.chargingStationRoom,
+        TypeConstraints.None(Type.String)
+      ),
+      DeviceProperty.WithTypeConstraint(
+        "rooms",
+        "Rooms",
+        a.roomba.rooms.mkString(", "),
+        TypeConstraints.None(Type.String)
+      )
+    ),
+    Seq(
+      DeviceAction(
+        "set-mode",
+        "Set mode",
+        Some("Sets the cleaning mode"),
+        TypeConstraints.Enum(Set("Silent", "Performance", "DeepCleaning"))
+      ),
+      DeviceAction(
+        "start",
+        "Start",
+        Some("Makes the roomba go cleaning"),
+        TypeConstraints.None(Type.Void)
+      ),
+      DeviceAction(
+        "stop",
+        "Stop",
+        Some("Makes the roomba go charging"),
+        TypeConstraints.None(Type.Void)
+      )
+    ),
+    Seq()
+  )
 object Marshalling:
   val registerJSONExample = """
   {
