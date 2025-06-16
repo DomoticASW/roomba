@@ -1,7 +1,7 @@
 package domain
 
 import fsm.FSM.*
-import ports.Server
+import ports.ServerCommunicationProtocol.*
 import Roomba.*
 
 /** @param roomba
@@ -10,7 +10,11 @@ import Roomba.*
   *   It is suggested to choose a period which is less than the MEST (Minimum
   *   Event Separation Time)
   */
-class RoombaAgent(private var _roomba: Roomba, periodMs: Long) extends Thread:
+class RoombaAgent(
+    val serverComm: ServerCommunicationProtocol,
+    private var _roomba: Roomba,
+    periodMs: Long
+) extends Thread:
 
   def roomba: Roomba = synchronized { _roomba }
   def roomba_=(r: Roomba): Unit = synchronized { _roomba = r }
@@ -27,14 +31,14 @@ class RoombaAgent(private var _roomba: Roomba, periodMs: Long) extends Thread:
       events = Seq()
       res
 
-  private var server: Option[Server] = None
+  private var serverAddress: Option[ServerAddress] = None
 
   /** Once registered to a server the agent will send it's state once every
     * `periodMs`
     */
-  def registerToServer(server: Server): Unit =
+  def registerToServer(serverAddress: ServerAddress): Unit =
     synchronized:
-      this.server = Some(server)
+      this.serverAddress = Some(serverAddress)
 
   private var _shouldStop = false
   private def shouldStop: Boolean = synchronized { _shouldStop }
@@ -48,4 +52,4 @@ class RoombaAgent(private var _roomba: Roomba, periodMs: Long) extends Thread:
           val r = roomba.step(periodMs, Some(h))
           t.foldLeft(r)((r, e) => r.step(0, Some(e)))
         case Nil => roomba.step(periodMs, None)
-      server.foreach(_.sendCurrentState(roomba))
+      serverAddress.foreach(addr => serverComm.sendCurrentState(addr, roomba))

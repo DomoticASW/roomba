@@ -1,9 +1,11 @@
-import domain.Roomba.*
-import domain.RoombaAgent
 import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
-import adapters.DomoticASWDeviceHttpInterface
 import scala.concurrent.ExecutionContext
+import ports.ServerCommunicationProtocol.*
+import domain.Roomba.*
+import domain.RoombaAgent
+import adapters.DomoticASWDeviceHttpInterface
+import adapters.ServerCommunicationProtocolHttpAdapter
 
 object MainFSM extends App:
   def parseBattery: Either[String, Int] =
@@ -63,6 +65,22 @@ object MainFSM extends App:
         case Some(other) => Left(s"$other is not a valid value for STATE")
     yield (state)
 
+  def parseServerAddress: Either[String, Option[ServerAddress]] =
+    object Int:
+      def unapply(s: String): Option[scala.Int] = s.toIntOption
+
+    def stringToServerAddress(s: String): Either[String, ServerAddress] =
+      s.split(":").toList match
+        case host :: (Int(port) :: next) => Right(ServerAddress(host, port))
+        case _ => Left(s"Invalid server address \"$s\"")
+
+    for
+      serverAddressStr <- Right(sys.env.get("SERVER_ADDRESS"))
+      serverAddress <- serverAddressStr match
+        case Some(value) => stringToServerAddress(value).map(Some(_))
+        case None        => Right(None)
+    yield (serverAddress)
+
   val config = for
     id <- Right(sys.env.get("ID").getOrElse("roomba"))
     name <- Right(sys.env.get("NAME").getOrElse("Roomba"))
@@ -74,6 +92,7 @@ object MainFSM extends App:
     initRoom <- Right(sys.env.get("INIT_ROOM").getOrElse(rooms.head))
     chargingRoom <- Right(sys.env.get("CHARGING_ROOM").getOrElse(rooms.last))
     initialState <- parseInitialState
+    serverAddress <- parseServerAddress
     roomba <- Roomba(
       id,
       initialState,
@@ -86,14 +105,20 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield roomba
+  yield (roomba, serverAddress)
 
   config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(roomba) =>
-      val roombaAgent = RoombaAgent(roomba, 50)
+    case Right(roomba, serverAddress) =>
+      val ec = ExecutionContext.global
+      val roombaAgent = RoombaAgent(
+        new ServerCommunicationProtocolHttpAdapter(using ec),
+        roomba,
+        50
+      )
+      serverAddress.foreach(addr => roombaAgent.registerToServer(addr))
       roombaAgent.start()
 
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")

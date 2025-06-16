@@ -12,6 +12,7 @@ import pekko.stream.scaladsl.Sink
 import spray.json.DefaultJsonProtocol.{*, given}
 import spray.json.*
 import domoticasw.DomoticASW.*
+import ports.ServerCommunicationProtocol.ServerAddress
 import domain.RoombaAgent
 import domain.Roomba.Event.*
 import domain.Roomba.Mode.*
@@ -29,7 +30,7 @@ object DomoticASWDeviceHttpInterface:
     s"Unexpected mode \"$mode\", expected values are [\"Silent\", \"Performance\", \"Deep Cleaning\"]"
 
   def apply(host: String, port: Int, roombaAgent: RoombaAgent)(
-      using a: ActorSystem[Any]
+      using ActorSystem[Any]
   ): Future[ServerBinding] =
     Http()
       .newServerAt(host, port)
@@ -68,10 +69,7 @@ object DomoticASWDeviceHttpInterface:
               (path("register") & entity(as[RegisterBody]) & post): body =>
                 val host = clientAddress.getHostName()
                 val port = body.serverPort
-                println(s"$host:$port")
-                val serverHttpAdapter =
-                  ServerHttpAdapter(host, port)(using a.executionContext)
-                roombaAgent.registerToServer(serverHttpAdapter)
+                roombaAgent.registerToServer(ServerAddress(host, port))
                 complete(StatusCodes.OK, roombaRegistration(roombaAgent))
             )
       }

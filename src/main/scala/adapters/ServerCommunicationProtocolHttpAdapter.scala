@@ -5,15 +5,15 @@ import sttp.model.*
 import sttp.client4.quick.*
 import sttp.client4.DefaultFutureBackend
 import upickle.default.*
-import ports.Server
+import ports.ServerCommunicationProtocol.*
 import domain.Roomba.*
 import domoticasw.DomoticASW
 import domoticasw.DomoticASW.ActualTypes
 import upickle.core.Visitor
 import domoticasw.DomoticASW.Color
 
-class ServerHttpAdapter(host: String, port: Int)(using ExecutionContext)
-    extends Server:
+class ServerCommunicationProtocolHttpAdapter(using ExecutionContext)
+    extends ServerCommunicationProtocol:
   case class RoombaState(
       state: State,
       battery: Int,
@@ -38,7 +38,10 @@ class ServerHttpAdapter(host: String, port: Int)(using ExecutionContext)
       value: DomoticASW.ActualTypes
   ) derives Writer
   var prevState: Option[RoombaState] = None
-  override def sendCurrentState(roomba: Roomba): Future[Unit] =
+  override def sendCurrentState(
+      address: ServerAddress,
+      roomba: Roomba
+  ): Future[Unit] =
     val currentState = RoombaState(
       roomba.state,
       roomba.battery,
@@ -58,7 +61,7 @@ class ServerHttpAdapter(host: String, port: Int)(using ExecutionContext)
         quickRequest
           .httpVersion(HttpVersion.HTTP_1_1)
           .patch(
-            uri"http://$host:$port/api/devices/${roomba.id}/properties"
+            uri"http://${address.host}:${address.port}/api/devices/${roomba.id}/properties"
           )
           .contentType(MediaType.ApplicationJson)
           .body(write(updates))
