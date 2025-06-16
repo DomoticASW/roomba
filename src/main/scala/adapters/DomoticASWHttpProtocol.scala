@@ -1,6 +1,7 @@
 package adapters
 
 import scala.concurrent.Future
+import java.util.UUID
 import org.apache.pekko
 import pekko.actor.typed.ActorSystem
 import pekko.http.scaladsl.Http
@@ -8,19 +9,20 @@ import pekko.http.scaladsl.Http.ServerBinding
 import pekko.http.scaladsl.model._
 import pekko.http.scaladsl.server.Directives._
 import pekko.http.scaladsl.marshallers.sprayjson.SprayJsonSupport.{*, given}
+import pekko.stream.scaladsl.Sink
 import spray.json.DefaultJsonProtocol.{*, given}
 import spray.json.*
 import domoticasw.DomoticASW.*
 import domain.RoombaAgent
 import domain.Roomba.Event.*
 import domain.Roomba.Mode.*
-import java.util.UUID
 
 object DomoticASWDeviceHttpInterface:
   import Marshalling.given
   case class BadRequest(message: String)
   case class NotFound(message: String)
   case class ExecuteActionBody(input: Option[String])
+  case class RegisterBody(serverPort: Int)
 
   def badActionIdMessage(action: String) =
     s"Action \"$action\" not found, known actions are [\"start\", \"stop\", \"setMode\"]"
@@ -32,39 +34,46 @@ object DomoticASWDeviceHttpInterface:
   ): Future[ServerBinding] =
     Http()
       .newServerAt(host, port)
-      .bind:
-        concat( // TODO: add other paths
-          (path("execute" / Segment) & entity(as[ExecuteActionBody])):
-            // TODO: proper error when unmarshalling fails
-            (segment, body) =>
-              val event = segment match
-                case "start" => Right(Start)
-                case "stop"  => Right(Stop)
-                case "set-mode" =>
-                  body.input match
-                    case Some("Silent")      => Right(ChangeMode(Silent))
-                    case Some("Performance") => Right(ChangeMode(Performance))
-                    case Some("Deep Cleaning") =>
-                      Right(ChangeMode(DeepCleaning))
-                    case Some(m) => Left(BadRequest(badModeMessage(m)))
-                    case None    => Left(BadRequest(badModeMessage("null")))
-                case _ => Left(NotFound(badActionIdMessage(segment)))
-              post:
-                event match
-                  case Left(err @ BadRequest(_)) =>
-                    complete(StatusCodes.BadRequest, err)
-                  case Left(err @ NotFound(_)) =>
-                    complete(StatusCodes.NotFound, err)
-                  case Right(value) =>
-                    roombaAgent.enqueEvent(value)
-                    complete(StatusCodes.OK)
-          ,
-          (path("register") & post):
-            complete(StatusCodes.OK, roombaRegistration(roombaAgent))
-        )
+      .connectionSource()
+      .to {
+        Sink foreach: conn =>
+          val clientAddress = conn.remoteAddress
+          conn.handleWithAsyncHandler:
+            concat( // TODO: add other paths
+              (path("execute" / Segment) & entity(as[ExecuteActionBody])):
+                // TODO: proper error when unmarshalling fails
+                (segment, body) =>
+                  val event = segment match
+                    case "start" => Right(Start)
+                    case "stop"  => Right(Stop)
+                    case "set-mode" =>
+                      body.input match
+                        case Some("Silent") => Right(ChangeMode(Silent))
+                        case Some("Performance") =>
+                          Right(ChangeMode(Performance))
+                        case Some("Deep Cleaning") =>
+                          Right(ChangeMode(DeepCleaning))
+                        case Some(m) => Left(BadRequest(badModeMessage(m)))
+                        case None    => Left(BadRequest(badModeMessage("null")))
+                    case _ => Left(NotFound(badActionIdMessage(segment)))
+                  post:
+                    event match
+                      case Left(err @ BadRequest(_)) =>
+                        complete(StatusCodes.BadRequest, err)
+                      case Left(err @ NotFound(_)) =>
+                        complete(StatusCodes.NotFound, err)
+                      case Right(value) =>
+                        roombaAgent.enqueEvent(value)
+                        complete(StatusCodes.OK)
+              ,
+              (path("register") & entity(as[RegisterBody]) & post): body =>
+                complete(StatusCodes.OK, roombaRegistration(roombaAgent))
+            )
+      }
+      .run()
 
   def roombaRegistration(a: RoombaAgent) = DeviceRegistration(
-    UUID.randomUUID().toString(),
+    a.roomba.id.toString(),
     a.roomba.name,
     Seq(
       DeviceProperty.WithTypeConstraint(
@@ -131,6 +140,7 @@ object Marshalling:
   given RootJsonFormat[BadRequest] = jsonFormat1(BadRequest.apply)
   given RootJsonFormat[NotFound] = jsonFormat1(NotFound.apply)
   given RootJsonFormat[ExecuteActionBody] = jsonFormat1(ExecuteActionBody.apply)
+  given RootJsonFormat[RegisterBody] = jsonFormat1(RegisterBody.apply)
 
   given RootJsonFormat[Color] = jsonFormat3(Color.apply)
   given RootJsonFormat[Type] = new RootJsonFormat {

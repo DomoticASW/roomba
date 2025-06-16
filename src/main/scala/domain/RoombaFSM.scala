@@ -2,6 +2,7 @@ package domain
 
 import scala.util.Random
 import fsm.FSM.*
+import java.util.UUID
 
 private[domain] object RoombaFSM:
 
@@ -23,6 +24,7 @@ private[domain] object RoombaFSM:
   import Event.*
 
   case class RoombaData(
+      id: UUID,
       name: String,
       battery: Int,
       mode: Mode,
