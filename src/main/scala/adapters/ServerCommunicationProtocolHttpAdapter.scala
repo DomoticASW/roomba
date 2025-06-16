@@ -66,4 +66,8 @@ class ServerCommunicationProtocolHttpAdapter(using ExecutionContext)
           .contentType(MediaType.ApplicationJson)
           .body(write(updates))
           .send(DefaultFutureBackend())
+          .recoverWith(err =>
+            Console.err.println(err)
+            Future.failed(err)
+          )
           .map(_ => ())
