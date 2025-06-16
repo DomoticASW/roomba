@@ -3,7 +3,6 @@ package domain
 import scala.util.Random
 import fsm.FSM.*
 import Utils.*
-import java.util.UUID
 
 object Roomba extends RoombaOps:
   export RoombaFSM.State
@@ -14,7 +13,7 @@ object Roomba extends RoombaOps:
 
   object Roomba:
     def apply(
-        id: UUID,
+        id: String,
         initialState: State,
         name: String,
         battery: Int,
@@ -58,7 +57,7 @@ object Roomba extends RoombaOps:
   import fsm.FSM.step as fsmStep
   import fsm.FSM.state as fsmState
   extension (fsm: Roomba)
-    def id: UUID = fsm.data.id
+    def id: String = fsm.data.id
     def state: State = fsm.fsmState
     def name: String = fsm.data.name
     def battery: Int = fsm.data.battery
@@ -73,7 +72,7 @@ object Roomba extends RoombaOps:
 trait RoombaOps:
   import Roomba.*
   extension (r: Roomba)
-    def id: UUID
+    def id: String
     def name: String
     def state: State
     def battery: Int

@@ -1,6 +1,5 @@
 package adapters
 
-import java.util.UUID
 import scala.concurrent.*
 import sttp.model.*
 import sttp.client4.quick.*

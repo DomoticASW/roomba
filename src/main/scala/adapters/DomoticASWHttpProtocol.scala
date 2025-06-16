@@ -1,7 +1,6 @@
 package adapters
 
 import scala.concurrent.Future
-import java.util.UUID
 import org.apache.pekko
 import pekko.actor.typed.ActorSystem
 import pekko.http.scaladsl.Http

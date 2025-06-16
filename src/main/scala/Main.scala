@@ -4,7 +4,6 @@ import org.apache.pekko.actor.typed.ActorSystem
 import org.apache.pekko.actor.typed.scaladsl.Behaviors
 import adapters.DomoticASWDeviceHttpInterface
 import scala.concurrent.ExecutionContext
-import java.util.UUID
 
 object MainFSM extends App:
   def parseBattery: Either[String, Int] =
@@ -64,8 +63,8 @@ object MainFSM extends App:
         case Some(other) => Left(s"$other is not a valid value for STATE")
     yield (state)
 
-  // TODO: take UUID as env with always same default
   val config = for
+    id <- Right(sys.env.get("ID").getOrElse("roomba"))
     name <- Right(sys.env.get("NAME").getOrElse("Roomba"))
     battery <- parseBattery
     batteryRateMs <- parseBatteryRate
@@ -76,7 +75,7 @@ object MainFSM extends App:
     chargingRoom <- Right(sys.env.get("CHARGING_ROOM").getOrElse(rooms.last))
     initialState <- parseInitialState
     roomba <- Roomba(
-      UUID.randomUUID(),
+      id,
       initialState,
       name,
       battery,

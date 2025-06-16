@@ -24,7 +24,7 @@ private[domain] object RoombaFSM:
   import Event.*
 
   case class RoombaData(
-      id: UUID,
+      id: String,
       name: String,
       battery: Int,
       mode: Mode,
