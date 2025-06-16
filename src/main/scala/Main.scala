@@ -122,4 +122,4 @@ object MainFSM extends App:
       roombaAgent.start()
 
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")
-      DomoticASWDeviceHttpInterface("0.0.0.0", 8085, roombaAgent)
+      DomoticASWDeviceHttpInterface("0.0.0.0", 8080, roombaAgent)
