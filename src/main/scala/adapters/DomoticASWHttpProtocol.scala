@@ -71,6 +71,9 @@ object DomoticASWDeviceHttpInterface:
                 val port = body.serverPort
                 roombaAgent.registerToServer(ServerAddress(host, port))
                 complete(StatusCodes.OK, roombaRegistration(roombaAgent))
+              ,
+              path("check-status"):
+                complete(StatusCodes.OK)
             )
       }
       .run()
