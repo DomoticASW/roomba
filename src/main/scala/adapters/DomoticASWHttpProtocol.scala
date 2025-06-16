@@ -67,6 +67,12 @@ object DomoticASWDeviceHttpInterface:
                         complete(StatusCodes.OK)
               ,
               (path("register") & entity(as[RegisterBody]) & post): body =>
+                val host = clientAddress.getHostName()
+                val port = body.serverPort
+                println(s"$host:$port")
+                val serverHttpAdapter =
+                  ServerHttpAdapter(host, port)(using a.executionContext)
+                roombaAgent.registerToServer(serverHttpAdapter)
                 complete(StatusCodes.OK, roombaRegistration(roombaAgent))
             )
       }
