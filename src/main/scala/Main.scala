@@ -65,13 +65,13 @@ object MainFSM extends App:
         case Some(other) => Left(s"$other is not a valid value for STATE")
     yield (state)
 
-  def parseServerAddress: Either[String, Option[ServerAddress]] =
-    object Int:
-      def unapply(s: String): Option[scala.Int] = s.toIntOption
+  object isInt:
+    def unapply(s: String): Option[Int] = s.toIntOption
 
+  def parseServerAddress: Either[String, Option[ServerAddress]] =
     def stringToServerAddress(s: String): Either[String, ServerAddress] =
       s.split(":").toList match
-        case host :: (Int(port) :: next) => Right(ServerAddress(host, port))
+        case host :: (isInt(port) :: next) => Right(ServerAddress(host, port))
         case _ => Left(s"Invalid server address \"$s\"")
 
     for
@@ -80,6 +80,13 @@ object MainFSM extends App:
         case Some(value) => stringToServerAddress(value).map(Some(_))
         case None        => Right(None)
     yield (serverAddress)
+
+  def parsePort(default: Int): Either[String, Int] =
+    sys.env.get("PORT") match
+      case None                                  => Right(default)
+      case Some(isInt(p)) if p >= 0 & p <= 65335 => Right(p)
+      case Some(isInt(p)) => Left(s"Invalid port $p is out of valid port range")
+      case Some(nonInt)   => Left(s"Invalid port $nonInt is not an integer")
 
   val config = for
     id <- Right(sys.env.get("ID").getOrElse("roomba"))
@@ -93,6 +100,7 @@ object MainFSM extends App:
     chargingRoom <- Right(sys.env.get("CHARGING_ROOM").getOrElse(rooms.last))
     initialState <- parseInitialState
     serverAddress <- parseServerAddress
+    port <- parsePort(default = 8080)
     roomba <- Roomba(
       id,
       initialState,
@@ -105,13 +113,13 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield (roomba, serverAddress)
+  yield (roomba, serverAddress, port)
 
   config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(roomba, serverAddress) =>
+    case Right(roomba, serverAddress, port) =>
       val ec = ExecutionContext.global
       val roombaAgent = RoombaAgent(
         new ServerCommunicationProtocolHttpAdapter(using ec),
@@ -122,4 +130,4 @@ object MainFSM extends App:
       roombaAgent.start()
 
       given ActorSystem[Any] = ActorSystem(Behaviors.empty, "system")
-      DomoticASWDeviceHttpInterface("0.0.0.0", 8080, roombaAgent)
+      DomoticASWDeviceHttpInterface("0.0.0.0", port, roombaAgent)

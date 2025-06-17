@@ -23,3 +23,4 @@ For example `docker run -e NAME=MyRoomba -e BATTERY=10 ventus218/domoticasw-room
 | CHARGING_ROOM       | (Last of the provided rooms)           | Room with charging station                    | One of the listed rooms           |
 | STATE               | Cleaning                               | Initial robot state                           | Cleaning, Charging, GoingCharging |
 | SERVER_ADDRESS      |                                        | Should be set if roomba is already registered | <host>:<port>                     |
+| PORT                | 8080                                   | Port on which the device will listen          | Any valid port                    |
