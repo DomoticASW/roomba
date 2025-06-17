@@ -8,67 +8,74 @@ import adapters.DomoticASWDeviceHttpInterface
 import adapters.ServerCommunicationProtocolHttpAdapter
 
 object MainFSM extends App:
-  def parseBattery: Either[String, Int] =
+  def parse(envVar: String)(default: String): Right[Nothing, String] =
+    Right(sys.env.getOrElse(envVar, default))
+
+  def parseBattery(default: Int): Either[String, Int] =
     for
       batteryStr <- Right(sys.env.get("BATTERY"))
       battery <- batteryStr match
-        case None => Right(50)
+        case None => Right(default)
         case Some(value) =>
           value.toIntOption.toRight("Battery should be integer")
     yield (battery)
 
-  def parseBatteryRate: Either[String, Long] =
+  def parseBatteryRate(default: Long): Either[String, Long] =
     for
       batteryRateMsStr <- Right(sys.env.get("BATTERY_RATE_MS"))
       batteryRateMs <- batteryRateMsStr match
-        case None => Right(1000)
+        case None => Right(default)
         case Some(value) =>
-          value.toIntOption.toRight("Battery rate should be integer")
+          value.toLongOption.toRight("Battery rate should be integer")
     yield (batteryRateMs)
 
-  def parseChangeRoomRate: Either[String, Long] =
+  def parseChangeRoomRate(default: Long): Either[String, Long] =
     for
       changeRoomRateMsStr <- Right(sys.env.get("CHANGE_ROOM_RATE_MS"))
       changeRoomRateMs <- changeRoomRateMsStr match
-        case None => Right(4000)
+        case None => Right(default)
         case Some(value) =>
-          value.toIntOption.toRight("Change room rate should be integer")
+          value.toLongOption.toRight("Change room rate should be integer")
     yield (changeRoomRateMs)
 
-  def parseMode: Either[String, Mode] =
+  def parseMode(default: Mode): Either[String, Mode] =
     for
       modeStr <- Right(sys.env.get("MODE"))
       mode <- modeStr match
-        case Some("Silent")             => Right(Mode.Silent)
-        case Some("DeepCleaning")       => Right(Mode.DeepCleaning)
-        case Some("Performance") | None => Right(Mode.Performance)
+        case Some("Silent")       => Right(Mode.Silent)
+        case Some("DeepCleaning") => Right(Mode.DeepCleaning)
+        case Some("Performance")  => Right(Mode.Performance)
+        case None                 => Right(default)
         case Some(other) => Left(s"$other is not a valid value for MODE")
     yield (mode)
 
-  def parseRooms: Either[String, Set[String]] =
+  def parseRooms(default: Set[String]): Either[String, Set[String]] =
     for
       roomsStr <-
         Right(sys.env.get("ROOMS").map(_.split(",").map(_.trim()).toSet))
       rooms <- roomsStr match
-        case None => Right(Set("Kitchen", "Bedroom", "Livingroom", "Bathroom"))
+        case None                          => Right(default)
         case Some(value) if value.size > 1 => Right(value)
         case _ => Left("At least one room should be given")
     yield (rooms)
 
-  def parseInitialState: Either[String, State] =
+  def parseInitialState(default: State): Either[String, State] =
     for
       stateStr <- Right(sys.env.get("STATE"))
       state <- stateStr match
-        case Some("Charging")        => Right(State.Charging)
-        case Some("GoingCharging")   => Right(State.GoingCharging)
-        case Some("Cleaning") | None => Right(State.Cleaning)
+        case Some("Charging")      => Right(State.Charging)
+        case Some("GoingCharging") => Right(State.GoingCharging)
+        case Some("Cleaning")      => Right(State.Cleaning)
+        case None                  => Right(default)
         case Some(other) => Left(s"$other is not a valid value for STATE")
     yield (state)
 
   object isInt:
     def unapply(s: String): Option[Int] = s.toIntOption
 
-  def parseServerAddress: Either[String, Option[ServerAddress]] =
+  def parseServerAddress(
+      default: Option[ServerAddress]
+  ): Either[String, Option[ServerAddress]] =
     def stringToServerAddress(s: String): Either[String, ServerAddress] =
       s.split(":").toList match
         case host :: (isInt(port) :: next) => Right(ServerAddress(host, port))
@@ -78,7 +85,7 @@ object MainFSM extends App:
       serverAddressStr <- Right(sys.env.get("SERVER_ADDRESS"))
       serverAddress <- serverAddressStr match
         case Some(value) => stringToServerAddress(value).map(Some(_))
-        case None        => Right(None)
+        case None        => Right(default)
     yield (serverAddress)
 
   def parsePort(default: Int): Either[String, Int] =
@@ -89,17 +96,19 @@ object MainFSM extends App:
       case Some(nonInt)   => Left(s"Invalid port $nonInt is not an integer")
 
   val config = for
-    id <- Right(sys.env.get("ID").getOrElse("roomba"))
-    name <- Right(sys.env.get("NAME").getOrElse("Roomba"))
-    battery <- parseBattery
-    batteryRateMs <- parseBatteryRate
-    mode <- parseMode
-    changeRoomRateMs <- parseChangeRoomRate
-    rooms <- parseRooms
-    initRoom <- Right(sys.env.get("INIT_ROOM").getOrElse(rooms.head))
-    chargingRoom <- Right(sys.env.get("CHARGING_ROOM").getOrElse(rooms.last))
-    initialState <- parseInitialState
-    serverAddress <- parseServerAddress
+    id <- parse("ID")(default = "roomba")
+    name <- parse("NAME")(default = "Roomba")
+    battery <- parseBattery(default = 50)
+    batteryRateMs <- parseBatteryRate(default = 1000)
+    mode <- parseMode(default = Mode.Performance)
+    changeRoomRateMs <- parseChangeRoomRate(default = 4000)
+    rooms <- parseRooms(default =
+      Set("Kitchen", "Bedroom", "Livingroom", "Bathroom")
+    )
+    initRoom <- parse("INIT_ROOM")(default = rooms.head)
+    chargingRoom <- parse("CHARGING_ROOM")(default = rooms.last)
+    initialState <- parseInitialState(default = State.Cleaning)
+    serverAddress <- parseServerAddress(default = None)
     port <- parsePort(default = 8080)
     roomba <- Roomba(
       id,
