@@ -117,6 +117,9 @@ object MainFSM extends App:
     )
     initRoom <- parse("INIT_ROOM")(default = rooms.head)
     chargingRoom <- parse("CHARGING_ROOM")(default = rooms.last)
+    discoveryBroadcastAddress <- parse("DISCOVERY_BROADCAST_ADDR")(default =
+      "255.255.255.255"
+    )
     serverDiscoveryPort <- parseServerDiscoveryPort()
     initialState <- parseInitialState(default = State.Cleaning)
     serverAddress <- parseServerAddress(default = None)
@@ -133,16 +136,29 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield (roomba, serverAddress, port, serverDiscoveryPort)
+  yield (
+    roomba,
+    serverAddress,
+    port,
+    discoveryBroadcastAddress,
+    serverDiscoveryPort
+  )
 
   config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(roomba, serverAddress, port, serverDiscoveryPort) =>
+    case Right(
+          roomba,
+          serverAddress,
+          port,
+          discoveryBroadcastAddress,
+          serverDiscoveryPort
+        ) =>
       val ec = ExecutionContext.global
       val roombaAgent = RoombaAgent(
         new ServerCommunicationProtocolHttpAdapter(
+          discoveryBroadcastAddress = discoveryBroadcastAddress,
           serverPortToWhichAnnounce = serverDiscoveryPort,
           clientPortToAnnounce = port
         )(using ec),

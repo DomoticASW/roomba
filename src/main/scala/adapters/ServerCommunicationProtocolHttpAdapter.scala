@@ -13,6 +13,7 @@ import upickle.core.Visitor
 import domoticasw.DomoticASW.Color
 
 class ServerCommunicationProtocolHttpAdapter(
+    private val discoveryBroadcastAddress: String,
     private val serverPortToWhichAnnounce: Int,
     private val clientPortToAnnounce: Int
 )(
@@ -88,8 +89,7 @@ class ServerCommunicationProtocolHttpAdapter(
       val data =
         write(AnnounceMessage(roomba.id, roomba.name, clientPortToAnnounce))
           .getBytes(StandardCharsets.UTF_8)
-      // Change to your local subnet broadcast address if needed, e.g., "192.168.1.255"
-      val broadcastAddress = InetAddress.getByName("255.255.255.255")
+      val broadcastAddress = InetAddress.getByName(discoveryBroadcastAddress)
       val packet = new DatagramPacket(
         data,
         data.length,
