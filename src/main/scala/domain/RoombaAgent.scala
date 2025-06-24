@@ -13,7 +13,8 @@ import Roomba.*
 class RoombaAgent(
     val serverComm: ServerCommunicationProtocol,
     private var _roomba: Roomba,
-    periodMs: Long
+    private val periodMs: Long,
+    private val announceEveryMs: Long
 ) extends Thread:
 
   def roomba: Roomba = synchronized { _roomba }
@@ -32,6 +33,7 @@ class RoombaAgent(
       res
 
   private var serverAddress: Option[ServerAddress] = None
+  private var timeFromLastAnnounceMs: Long = 0
 
   /** Once registered to a server the agent will send it's state once every
     * `periodMs`
@@ -52,4 +54,11 @@ class RoombaAgent(
           val r = roomba.step(periodMs, Some(h))
           t.foldLeft(r)((r, e) => r.step(0, Some(e)))
         case Nil => roomba.step(periodMs, None)
-      serverAddress.foreach(addr => serverComm.sendCurrentState(addr, roomba))
+      serverAddress match
+        case Some(serverAddress) =>
+          serverComm.sendCurrentState(serverAddress, roomba)
+        case None if timeFromLastAnnounceMs >= announceEveryMs =>
+          serverComm.announce(roomba)
+          timeFromLastAnnounceMs = 0
+        case None =>
+          timeFromLastAnnounceMs += periodMs

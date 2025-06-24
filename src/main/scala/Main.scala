@@ -11,6 +11,16 @@ object MainFSM extends App:
   def parse(envVar: String)(default: String): Right[Nothing, String] =
     Right(sys.env.getOrElse(envVar, default))
 
+  def parseServerDiscoveryPort(): Either[String, Int] =
+    val envVar = "SERVER_DISCOVERY_PORT"
+    for
+      str <- sys.env.get(envVar).toRight(left = s"Missing a value for $envVar")
+      port <- str.toIntOption match
+        case None => Left(s"Invalid port $str is not an integer")
+        case Some(p) if p >= 0 & p <= 65335 => Right(p)
+        case Some(p) => Left(s"Invalid port $p is out of valid port range")
+    yield (port)
+
   def parseBattery(default: Int): Either[String, Int] =
     for
       batteryStr <- Right(sys.env.get("BATTERY"))
@@ -107,6 +117,7 @@ object MainFSM extends App:
     )
     initRoom <- parse("INIT_ROOM")(default = rooms.head)
     chargingRoom <- parse("CHARGING_ROOM")(default = rooms.last)
+    serverDiscoveryPort <- parseServerDiscoveryPort()
     initialState <- parseInitialState(default = State.Cleaning)
     serverAddress <- parseServerAddress(default = None)
     port <- parsePort(default = 8080)
@@ -122,18 +133,22 @@ object MainFSM extends App:
       batteryRateMs,
       changeRoomRateMs
     ).left.map(_.message)
-  yield (roomba, serverAddress, port)
+  yield (roomba, serverAddress, port, serverDiscoveryPort)
 
   config match
     case Left(err: String) =>
       Console.err.println(err)
       sys.exit(1)
-    case Right(roomba, serverAddress, port) =>
+    case Right(roomba, serverAddress, port, serverDiscoveryPort) =>
       val ec = ExecutionContext.global
       val roombaAgent = RoombaAgent(
-        new ServerCommunicationProtocolHttpAdapter(using ec),
+        new ServerCommunicationProtocolHttpAdapter(
+          serverPortToWhichAnnounce = serverDiscoveryPort,
+          clientPortToAnnounce = port
+        )(using ec),
         roomba,
-        50
+        periodMs = 50,
+        announceEveryMs = 1000
       )
       serverAddress.foreach(addr => roombaAgent.registerToServer(addr))
       roombaAgent.start()

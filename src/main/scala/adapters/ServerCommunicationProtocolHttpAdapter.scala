@@ -12,8 +12,12 @@ import domoticasw.DomoticASW.ActualTypes
 import upickle.core.Visitor
 import domoticasw.DomoticASW.Color
 
-class ServerCommunicationProtocolHttpAdapter(using ExecutionContext)
-    extends ServerCommunicationProtocol:
+class ServerCommunicationProtocolHttpAdapter(
+    private val serverPortToWhichAnnounce: Int,
+    private val clientPortToAnnounce: Int
+)(
+    using ExecutionContext
+) extends ServerCommunicationProtocol:
   case class RoombaState(
       state: State,
       battery: Int,
@@ -71,3 +75,25 @@ class ServerCommunicationProtocolHttpAdapter(using ExecutionContext)
             Future.failed(err)
           )
           .map(_ => ())
+
+  import java.net.{DatagramPacket, DatagramSocket, InetAddress}
+  import java.nio.charset.StandardCharsets
+  import scala.util.Using
+
+  case class AnnounceMessage(id: String, name: String, port: Int) derives Writer
+
+  override def announce(roomba: Roomba): Unit =
+    Using(DatagramSocket()): socket =>
+      socket.setBroadcast(true)
+      val data =
+        write(AnnounceMessage(roomba.id, roomba.name, clientPortToAnnounce))
+          .getBytes(StandardCharsets.UTF_8)
+      // Change to your local subnet broadcast address if needed, e.g., "192.168.1.255"
+      val broadcastAddress = InetAddress.getByName("255.255.255.255")
+      val packet = new DatagramPacket(
+        data,
+        data.length,
+        broadcastAddress,
+        serverPortToWhichAnnounce
+      )
+      socket.send(packet)

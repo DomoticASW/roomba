@@ -11,3 +11,4 @@ object ServerCommunicationProtocol:
         serverAddress: ServerAddress,
         roomba: Roomba
     ): Future[Unit]
+    def announce(roomba: Roomba): Unit
