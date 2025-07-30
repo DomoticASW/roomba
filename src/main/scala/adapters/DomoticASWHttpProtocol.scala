@@ -27,7 +27,7 @@ object DomoticASWDeviceHttpInterface:
   def badActionIdMessage(action: String) =
     s"Action \"$action\" not found, known actions are [\"start\", \"stop\", \"setMode\"]"
   def badModeMessage(mode: String) =
-    s"Unexpected mode \"$mode\", expected values are [\"Silent\", \"Performance\", \"Deep Cleaning\"]"
+    s"Unexpected mode \"$mode\", expected values are [\"Silent\", \"Performance\", \"Deep cleaning\"]"
 
   def apply(host: String, port: Int, roombaAgent: RoombaAgent)(
       using ActorSystem[Any]
@@ -51,7 +51,7 @@ object DomoticASWDeviceHttpInterface:
                         case Some("Silent") => Right(ChangeMode(Silent))
                         case Some("Performance") =>
                           Right(ChangeMode(Performance))
-                        case Some("Deep Cleaning") =>
+                        case Some("Deep cleaning") =>
                           Right(ChangeMode(DeepCleaning))
                         case Some(m) => Left(BadRequest(badModeMessage(m)))
                         case None    => Left(BadRequest(badModeMessage("null")))
@@ -125,7 +125,7 @@ object DomoticASWDeviceHttpInterface:
         "set-mode",
         "Set mode",
         Some("Sets the cleaning mode"),
-        TypeConstraints.Enum(Set("Silent", "Performance", "DeepCleaning"))
+        TypeConstraints.Enum(Set("Silent", "Performance", "Deep cleaning"))
       ),
       DeviceAction(
         "start",

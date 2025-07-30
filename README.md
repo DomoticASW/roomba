@@ -26,7 +26,7 @@ docker run \
 | NAME                     | Roomba                                 | Robot name                                           | Any string                                      |
 | BATTERY                  | 50                                     | Initial battery level                                | 0–100                                           |
 | BATTERY_RATE_MS          | 1000                                   | Battery update interval (ms)                         | Integers >= 0                                   |
-| MODE                     | Performance                            | Initial mode                                         | Silent, DeepCleaning, Performance               |
+| MODE                     | Performance                            | Initial mode                                         | Silent, Deep cleaning, Performance               |
 | CHANGE_ROOM_RATE_MS      | 4000                                   | Room change interval (ms)                            | Integers >= 0                                   |
 | ROOMS                    | Kitchen, Bedroom, Livingroom, Bathroom | Rooms in the house                                   | Comma-separated list of strings                 |
 | INIT_ROOM                | (First of the provided rooms)          | Starting room                                        | One of the listed rooms                         |
