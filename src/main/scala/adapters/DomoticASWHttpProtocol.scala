@@ -19,8 +19,8 @@ import domain.Roomba.Mode.*
 
 object DomoticASWDeviceHttpInterface:
   import Marshalling.given
-  case class BadRequest(message: String)
-  case class NotFound(message: String)
+  case class BadRequest(cause: String)
+  case class NotFound(cause: String)
   case class ExecuteActionBody(input: Option[String])
   case class RegisterBody(serverPort: Int)
 
@@ -67,7 +67,6 @@ object DomoticASWDeviceHttpInterface:
                         complete(StatusCodes.OK)
               ,
               (path("register") & entity(as[RegisterBody]) & post): body =>
-              
                 val host = clientAddress.getAddress().getHostAddress()
                 val port = body.serverPort
                 roombaAgent.registerToServer(ServerAddress(host, port))
