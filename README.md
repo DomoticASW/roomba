@@ -3,7 +3,7 @@
 ## Run with docker
 
 ```sh
-docker run -e LAN_HOSTNAME=roomba -e SERVER_DISCOVERY_PORT=30000 ventus218/domoticasw-roomba
+docker run -e LAN_HOSTNAME=localhost -e SERVER_DISCOVERY_PORT=30000 ventus218/domoticasw-roomba
 ```
 
 The following configurations can be passed to the container as environment variables.
@@ -15,7 +15,7 @@ For example:
 ```sh
 docker run \
     -e SERVER_DISCOVERY_PORT=30000 \
-    -e LAN_HOSTNAME=roomba \
+    -e LAN_HOSTNAME=localhost \
     -e NAME=MyRoomba \
     -e BATTERY=10 \
     ventus218/domoticasw-roomba
