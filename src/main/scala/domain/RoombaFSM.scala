@@ -32,7 +32,8 @@ private[domain] object RoombaFSM:
       chargingStationRoom: String,
       rooms: Set[String],
       batteryRateMs: Long,
-      changeRoomRateMs: Long
+      changeRoomRateMs: Long,
+      lanHostname: String
   )
 
   object Countdowns:

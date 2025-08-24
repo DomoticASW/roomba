@@ -52,10 +52,10 @@ object MainFSM extends App:
     for
       modeStr <- Right(sys.env.get("MODE"))
       mode <- modeStr match
-        case Some("Silent")       => Right(Mode.Silent)
+        case Some("Silent")        => Right(Mode.Silent)
         case Some("Deep cleaning") => Right(Mode.DeepCleaning)
-        case Some("Performance")  => Right(Mode.Performance)
-        case None                 => Right(default)
+        case Some("Performance")   => Right(Mode.Performance)
+        case None                  => Right(default)
         case Some(other) => Left(s"$other is not a valid value for MODE")
     yield (mode)
 
@@ -105,6 +105,10 @@ object MainFSM extends App:
       case Some(isInt(p)) => Left(s"Invalid port $p is out of valid port range")
       case Some(nonInt)   => Left(s"Invalid port $nonInt is not an integer")
 
+  def parselanHostname(): Either[String, String] =
+    val envVar = "LAN_HOSTNAME"
+    sys.env.get(envVar).toRight(left = s"Missing a value for $envVar")
+
   val config = for
     id <- parse("ID")(default = "roomba")
     name <- parse("NAME")(default = "Roomba")
@@ -124,6 +128,7 @@ object MainFSM extends App:
     initialState <- parseInitialState(default = State.Cleaning)
     serverAddress <- parseServerAddress(default = None)
     port <- parsePort(default = 8080)
+    lanHostname <- parselanHostname()
     roomba <- Roomba(
       id,
       initialState,
@@ -134,7 +139,8 @@ object MainFSM extends App:
       chargingRoom,
       rooms,
       batteryRateMs,
-      changeRoomRateMs
+      changeRoomRateMs,
+      lanHostname
     ).left.map(_.message)
   yield (
     roomba,

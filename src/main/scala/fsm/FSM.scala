@@ -94,8 +94,9 @@ object FSM:
         _ <- if reached then setCountdown(name, ms) else State.same
       yield (reached)
 
-    def ifCountdownReached[A](name: String)(f: FSMState[A])
-      : FSMState[Option[A]] =
+    def ifCountdownReached[A](
+        name: String
+    )(f: FSMState[A]): FSMState[Option[A]] =
       for
         reached <- countdownReached(name)
         res <-

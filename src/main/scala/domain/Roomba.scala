@@ -22,7 +22,8 @@ object Roomba extends RoombaOps:
         chargingStationRoom: String,
         rooms: Set[String],
         batteryRateMs: Long,
-        changeRoomRateMs: Long
+        changeRoomRateMs: Long,
+        lanHostname: String
     ): Either[BadConfiguration, Roomba] =
       for
         _ <- Either.leftIf(
@@ -48,7 +49,8 @@ object Roomba extends RoombaOps:
           chargingStationRoom,
           rooms,
           batteryRateMs,
-          changeRoomRateMs
+          changeRoomRateMs,
+          lanHostname
         )
       yield (FSM(initialState, roombaData))
 
@@ -67,6 +69,7 @@ object Roomba extends RoombaOps:
     def rooms: Set[String] = fsm.data.rooms
     def batteryRateMs: Long = fsm.data.batteryRateMs
     def changeRoomRateMs: Long = fsm.data.changeRoomRateMs
+    def lanHostname: String = fsm.data.lanHostname
     def step(ms: Long, e: Option[Event]): Roomba = fsm.fsmStep(ms, e)
 
 trait RoombaOps:

@@ -81,13 +81,25 @@ class ServerCommunicationProtocolHttpAdapter(
   import java.nio.charset.StandardCharsets
   import scala.util.Using
 
-  case class AnnounceMessage(id: String, name: String, port: Int) derives Writer
+  case class AnnounceMessage(
+      id: String,
+      name: String,
+      lanHostname: String,
+      port: Int
+  ) derives Writer
 
   override def announce(roomba: Roomba): Unit =
     Using(DatagramSocket()): socket =>
       socket.setBroadcast(true)
       val data =
-        write(AnnounceMessage(roomba.id, roomba.name, clientPortToAnnounce))
+        write(
+          AnnounceMessage(
+            roomba.id,
+            roomba.name,
+            roomba.lanHostname,
+            clientPortToAnnounce
+          )
+        )
           .getBytes(StandardCharsets.UTF_8)
       val broadcastAddress = InetAddress.getByName(discoveryBroadcastAddress)
       val packet = new DatagramPacket(
