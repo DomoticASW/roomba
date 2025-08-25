@@ -72,6 +72,10 @@ object DomoticASWDeviceHttpInterface:
                 roombaAgent.registerToServer(ServerAddress(host, port))
                 complete(StatusCodes.OK, roombaRegistration(roombaAgent))
               ,
+              (path("unregister") & post):
+                roombaAgent.unregister()
+                complete(StatusCodes.OK)
+              ,
               path("check-status"):
                 complete(StatusCodes.OK)
             )

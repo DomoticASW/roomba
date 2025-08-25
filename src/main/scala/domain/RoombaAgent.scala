@@ -41,6 +41,10 @@ class RoombaAgent(
   def registerToServer(serverAddress: ServerAddress): Unit =
     synchronized:
       this.serverAddress = Some(serverAddress)
+  
+  def unregister(): Unit =
+    synchronized:
+      this.serverAddress = None
 
   private var _shouldStop = false
   private def shouldStop: Boolean = synchronized { _shouldStop }
