@@ -17,6 +17,16 @@ private[domain] object RoombaFSM:
     case Performance
     case DeepCleaning
 
+    override def toString(): String =
+      this match
+        case Silent       => "Silent"
+        case Performance  => "Performance"
+        case DeepCleaning => "Deep cleaning"
+
+  object Mode:
+    def unapply(s: String): Option[Mode] =
+      Mode.values.find(m => m.toString() == s)
+
   enum Event:
     case ChangeMode(m: Mode)
     case Start

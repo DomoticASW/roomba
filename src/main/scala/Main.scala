@@ -51,11 +51,8 @@ object MainFSM extends App:
   def parseMode(default: Mode): Either[String, Mode] =
     for
       modeStr <- Right(sys.env.get("MODE"))
-      mode <- modeStr match
-        case Some("Silent")        => Right(Mode.Silent)
-        case Some("Deep cleaning") => Right(Mode.DeepCleaning)
-        case Some("Performance")   => Right(Mode.Performance)
-        case None                  => Right(default)
+      mode <- modeStr.flatMap(Mode.unapply) match
+        case None        => Right(default)
         case Some(other) => Left(s"$other is not a valid value for MODE")
     yield (mode)
 

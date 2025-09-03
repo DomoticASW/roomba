@@ -15,6 +15,7 @@ import domoticasw.DomoticASW.*
 import ports.ServerCommunicationProtocol.ServerAddress
 import domain.RoombaAgent
 import domain.Roomba.Event.*
+import domain.Roomba.Mode
 import domain.Roomba.Mode.*
 
 object DomoticASWDeviceHttpInterface:
@@ -27,7 +28,8 @@ object DomoticASWDeviceHttpInterface:
   def badActionIdMessage(action: String) =
     s"Action \"$action\" not found, known actions are [\"start\", \"stop\", \"setMode\"]"
   def badModeMessage(mode: String) =
-    s"Unexpected mode \"$mode\", expected values are [\"Silent\", \"Performance\", \"Deep cleaning\"]"
+    val modesList = Mode.values.map(m => s"\"${m.toString()}\"").mkString(", ")
+    s"Unexpected mode \"$mode\", expected values are [$modesList]"
 
   def apply(host: String, port: Int, roombaAgent: RoombaAgent)(
       using ActorSystem[Any]
@@ -48,13 +50,9 @@ object DomoticASWDeviceHttpInterface:
                     case "stop"  => Right(Stop)
                     case "set-mode" =>
                       body.input match
-                        case Some("Silent") => Right(ChangeMode(Silent))
-                        case Some("Performance") =>
-                          Right(ChangeMode(Performance))
-                        case Some("Deep cleaning") =>
-                          Right(ChangeMode(DeepCleaning))
-                        case Some(m) => Left(BadRequest(badModeMessage(m)))
-                        case None    => Left(BadRequest(badModeMessage("null")))
+                        case Some(Mode(m)) => Right(ChangeMode(m))
+                        case Some(str) => Left(BadRequest(badModeMessage(str)))
+                        case None => Left(BadRequest(badModeMessage("null")))
                     case _ => Left(NotFound(badActionIdMessage(segment)))
                   post:
                     event match
@@ -128,7 +126,7 @@ object DomoticASWDeviceHttpInterface:
         "set-mode",
         "Set mode",
         Some("Sets the cleaning mode"),
-        TypeConstraints.Enum(Set("Silent", "Performance", "Deep cleaning"))
+        TypeConstraints.Enum(Mode.values.map(_.toString).toSet)
       ),
       DeviceAction(
         "start",
